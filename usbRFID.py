@@ -75,7 +75,7 @@ def dispenseBeer():
     GPIO.output(BEER_PIN, GPIO.LOW)
 
 def confirmCompassBeer(name, bal):
-    print(f"{name}, ${bal:.2f}")
+    print(f"{name}, ${bal}")
     print("# to dispense, * to cancel")
     startTime = time.now()
     while time.now() - startTime <= 5:
@@ -118,7 +118,7 @@ try:
             sleep(0.1)
         
         if cardID is not None:
-            print("Sending request to server for", cardID)
+            print("Querying balance for", cardID)
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
                 data = { "compassID": cardID }
@@ -129,6 +129,7 @@ try:
                 print(reply)
                 confirmCompassBeer(reply["name"], reply["balance"])
             except Exception:
+                print("Error state!")
                 print(r.text)
         
         keyQueue.churn()
