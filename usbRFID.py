@@ -52,6 +52,10 @@ class InputsQueue:
     def add(self, item):
         self.lastEditTime = time()
         self.queue.append(item)
+    
+    def clear(self):
+        self.lastEditTime = time()
+        self.queue.clear()
         
     def churn(self):
         now = time()
@@ -73,10 +77,14 @@ cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
 keyQueue = InputsQueue(maxlen = 8, timeout = 3)
 
 cardID = None
-keypadID = None
+keypadID = ""
+oldKeypadID = ""
 
 rfidReader = evdev.InputDevice('/dev/input/event0')
 print(rfidReader)
+
+def capturePIN():
+    print("stub")
 
 def dispenseBeer():
     print("Dispensing beer")
@@ -145,8 +153,16 @@ try:
         
         keyQueue.churn()
         keypadID = keyQueue.peek()
-        if keypadID != "":
-            print(keypadID)
+        if keypadID != oldKeypadID:
+            print("Enter ID:", keypadID)
+            oldKeypadID = keypadID
+            if POUND_FLAG:
+                POUND_FLAG = False
+                capturePIN()
+            elif STAR_FLAG:
+                STAR_FLAG = False
+                keyQueue.clear()
+
 
 except KeyboardInterrupt:
     print("Caught Ctrl-C")
