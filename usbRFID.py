@@ -40,7 +40,7 @@ with rfidReader.grab_context():
                         cardQueue.add(data.keycode[-1]) # last character is one of interest
         except BlockingIOError:
             cardID = cardQueue.churn()
-            
+        
         if cardID is not None:
             r = requests.post(
                 "https://spd.jtang.ca/beer/compass", 
@@ -49,5 +49,8 @@ with rfidReader.grab_context():
                     "compassID": cardID
                 }
             )
-            reply = r.json()
-            print(reply)
+            try:
+                reply = r.json()
+                print(reply)
+            except Exception:
+                print(r)
