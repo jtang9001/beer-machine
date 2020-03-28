@@ -132,8 +132,11 @@ try:
                 print(r.text)
         
         keyQueue.churn()
-        if KEYPAD_DONE_FLAG:
-            KEYPAD_DONE_FLAG = False
+        if keyQueue.peek() != "":
+            print(keyQueue.peek())
+            sleep(0.1)
+        if POUND_FLAG:
+            POUND_FLAG = False
             userID = keyQueue.harvest()
             print(userID)
 
