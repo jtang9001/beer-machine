@@ -1,5 +1,6 @@
 from collections import deque
 from time import sleep, time
+import json
 
 import evdev
 import requests
@@ -87,7 +88,7 @@ rfidReader = evdev.InputDevice('/dev/input/event0')
 print(rfidReader)
 
 def capturePIN():
-    global keyQueue
+    global POUND_FLAG, STAR_FLAG, keyQueue
     startTime = time()
     keyQueue.clear()
     print("Enter PIN: ")
@@ -171,9 +172,11 @@ try:
                 reply = r.json()
                 print(reply)
                 confirmCompassBeer(cardID, reply["name"], reply["balance"])
+            except json.decoder.JSONDecodeError:
+                print("JSON error!")
+                print(r.text)
             except Exception:
                 print("Error state!")
-                print(r.text)
                 raise
             cardID = None
         
@@ -182,29 +185,34 @@ try:
         if keypadID != oldKeypadID:
             print("Enter ID:", keypadID)
             oldKeypadID = keypadID
-            if POUND_FLAG:
-                POUND_FLAG = False
-                keypadID = keyQueue.harvest()
-                pin = capturePIN()
-                if pin is not None:
-                    print("Querying balance for", keypadID)
-                    r = requests.post(
-                        "https://thetaspd.pythonanywhere.com/beer/pay_pin/", 
-                        data = { "pin": pin, "keypadID": keypadID, "cost": COST }
-                    )
-                    try:
-                        reply = r.json()
-                        print(reply)
-                        if reply["dispense"]:
-                            dispenseBeer()
-
-                    except Exception:
-                        print("Error state!")
-                        print(r.text)
-                        raise
-            elif STAR_FLAG:
-                STAR_FLAG = False
-                keyQueue.clear()
+            
+        elif POUND_FLAG:
+            POUND_FLAG = False
+            pin = capturePIN()
+            if pin is not None:
+                print("Querying balance for", keypadID)
+                r = requests.post(
+                    "https://thetaspd.pythonanywhere.com/beer/pay_pin/", 
+                    data = { "pin": pin, "keypadID": keypadID, "cost": COST }
+                )
+                try:
+                    reply = r.json()
+                    print(reply)
+                    if reply["dispense"]:
+                        dispenseBeer()
+                except json.decoder.JSONDecodeError:
+                    print("JSON error!")
+                    print(r.text)
+                except Exception:
+                    print("Error state!")
+                    raise
+            pin = None
+            keypadID = None
+            keyQueue.clear()
+        
+        elif STAR_FLAG:
+            STAR_FLAG = False
+            keyQueue.clear()
 
 
 except KeyboardInterrupt:
