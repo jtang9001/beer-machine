@@ -1,20 +1,41 @@
+from collections import deque
+from time import sleep, time
+
 import evdev
 
-device = evdev.InputDevice('/dev/input/event0')
-print(device)
+rfidReader = evdev.InputDevice('/dev/input/event0')
+print(rfidReader)
 
-cardID = []
-with device.grab_context():
+class InputsQueue:
+    def __init__(self, maxlen, timeout):
+        self.queue = deque(maxlen=maxlen)
+        self.timeout = timeout
+        self.lastEditTime = time()
+    
+    def add(self, item):
+        self.lastEditTime = time()
+        self.queue.append(item)
+        
+    def churn(self):
+        now = time()
+        if now - self.lastEditTime >= self.timeout:
+            self.queue.clear()
+        elif len(self.queue) == self.queue.maxlen:
+            contents = "".join(self.queue)
+            self.queue.clear()
+            return contents
+
+cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
+with rfidReader.grab_context():
     while True:
         try:
-            for event in device.read():
+            for event in rfidReader.read():
                 if event.type == evdev.ecodes.EV_KEY:
                     data = evdev.categorize(event)
                     if data.keystate == 1:
-                        cardID.append(data.keycode)
-
+                        cardQueue.add(data.keycode[-1]) # last character is one of interest
         except BlockingIOError:
-            if cardID != []:
-                print(cardID)
-                cardID = []
+            retVal = cardQueue.churn()
+            if retVal is not None:
+                print(retVal)
             pass
