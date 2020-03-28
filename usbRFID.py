@@ -4,54 +4,42 @@ from time import sleep, time
 import evdev
 import requests
 import RPi.GPIO as GPIO
+from pad4pi import rpi_gpio
 
 BEER_PIN = 0
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(BEER_PIN, GPIO.OUT, initial = GPIO.LOW)
 
-L1 = 5
-L2 = 6
-L3 = 13
-L4 = 19
+KEYPAD = [
+    ["1", "2", "3", "A"],
+    ['4', "5", "6", "B"],
+    ['7', "8", "9", "C"],
+    ["*", "0", "#", "D"]
+]
 
-C1 = 16
-C2 = 20
-C3 = 21
+ROW_PINS = [6, 13, 19, 26] # BCM numbering
+COL_PINS = [12, 16, 20, 21] # BCM numbering
 
-GPIO.setwarnings(False)
+factory = rpi_gpio.KeypadFactory()
 
-GPIO.setup(L1, GPIO.OUT)
-GPIO.setup(L2, GPIO.OUT)
-GPIO.setup(L3, GPIO.OUT)
-GPIO.setup(L4, GPIO.OUT)
+keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PINS)
 
-GPIO.setup(C1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-GPIO.setup(C2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-GPIO.setup(C3, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-def readLine(line, characters):
-    GPIO.output(line, GPIO.HIGH)
-    if(GPIO.input(C1) == 1):
-        return(characters[0])
-    if(GPIO.input(C2) == 1):
-        return(characters[1])
-    if(GPIO.input(C3) == 1):
-        return(characters[2])
-    GPIO.output(line, GPIO.LOW)
+POUND_FLAG = False
+STAR_FLAG = False
+def printKey(key):
+    global POUND_FLAG, STAR_FLAG, keyQueue
+    print("Keypad event:", key)
+    if key == "#":
+        POUND_FLAG = True
+    elif key == "*":
+        STAR_FLAG = True
+    else:
+        keyQueue.add(key)
 
-def readKeypad():
-    val1 = readLine(L1, ["1","2","3"])
-    val2 = readLine(L2, ["4","5","6"])
-    val3 = readLine(L3, ["7","8","9"])
-    val4 = readLine(L4, ["*","0","#"])
-    if val1 is not None:
-        return val1
-    elif val2 is not None:
-        return val2
-    elif val3 is not None:
-        return val3
-    elif val4 is not None:
-        return val4
+
+# printKey will be called each time a keypad button is pressed
+keypad.registerKeyPressHandler(printKey)
 
 COST = 2.50
 
@@ -102,8 +90,8 @@ def confirmCompassBeer(name, bal):
     print("# to dispense, * to cancel")
     startTime = time()
     while time() - startTime <= 5:
-        char = readKeypad()
-        if char == "#":
+        if POUND_FLAG:
+            POUND_FLAG = False
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_compass/", 
                 data = { "compassID": cardID, "cost": COST }
@@ -120,7 +108,7 @@ def confirmCompassBeer(name, bal):
                 raise
             return
 
-        elif char == "*":
+        elif STAR_FLAG:
             print("Beer cancelled with *")
             STAR_FLAG = False
             return
@@ -138,12 +126,6 @@ try:
         except BlockingIOError:
             cardID = cardQueue.churn()
             sleep(0.1)
-
-        key = readKeypad()
-        if key == "#":
-            keypadID = keyQueue.harvest()
-        elif key is not None:
-            keyQueue.add(key)
         
         if cardID is not None:
             print("Querying balance for", cardID)
@@ -162,9 +144,9 @@ try:
                 raise
         
         keyQueue.churn()
-        if keypadID is not None:
+        keypadID = keyQueue.peek()
+        if keypadID != "":
             print(keypadID)
-            keypadID = None
 
 except KeyboardInterrupt:
     print("Caught Ctrl-C")
