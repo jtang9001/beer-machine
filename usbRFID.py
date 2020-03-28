@@ -2,6 +2,9 @@ from collections import deque
 from time import sleep, time
 
 import evdev
+import requests
+
+COST = 2.50
 
 rfidReader = evdev.InputDevice('/dev/input/event0')
 print(rfidReader)
@@ -28,6 +31,7 @@ class InputsQueue:
 cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
 with rfidReader.grab_context():
     while True:
+
         try:
             for event in rfidReader.read():
                 if event.type == evdev.ecodes.EV_KEY:
@@ -35,7 +39,15 @@ with rfidReader.grab_context():
                     if data.keystate == 1:
                         cardQueue.add(data.keycode[-1]) # last character is one of interest
         except BlockingIOError:
-            retVal = cardQueue.churn()
-            if retVal is not None:
-                print(retVal)
-            pass
+            cardID = cardQueue.churn()
+            
+        if cardID is not None:
+            r = requests.post(
+                "https://spd.jtang.ca/beer/compass", 
+                data={
+                    "cost": COST,
+                    "compassID": cardID
+                }
+            )
+            reply = r.json()
+            print(reply)
