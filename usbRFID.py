@@ -63,7 +63,7 @@ def handleKey(key):
         keyQueue.add(key)
 
 # printKey will be called each time a keypad button is pressed
-keypad.registerKeyPressHandler(printKey)
+keypad.registerKeyPressHandler(handleKey)
 
 rfidReader = evdev.InputDevice('/dev/input/event0')
 print(rfidReader)
