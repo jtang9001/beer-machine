@@ -6,6 +6,7 @@ import evdev
 import requests
 import RPi.GPIO as GPIO
 from pad4pi import rpi_gpio
+from RPLCD.gpio import CharLCD
 
 BEER_PIN = 5
 GPIO.setmode(GPIO.BCM)
@@ -25,6 +26,11 @@ factory = rpi_gpio.KeypadFactory()
 
 keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PINS)
 
+lcd = CharLCD(pin_rs=25, pin_rw=None, pin_e=24, pins_data=[23, 17, 18, 22],
+              numbering_mode=GPIO.BCM, rows = 2, cols = 16)
+
+lcd.clear()
+lcd.write_string("SPD BEER-O-MATIC\n\rEnter ID or tap card")
 
 POUND_FLAG = False
 STAR_FLAG = False
@@ -93,6 +99,8 @@ def capturePIN():
     keyQueue.clear()
     print("Enter PIN: ")
     oldpin = ""
+    lcd.cursor_pos = (1,0)
+    lcd.write_string("PIN:")
     while time() - startTime <= 10:
         if POUND_FLAG:
             POUND_FLAG = False
@@ -105,15 +113,22 @@ def capturePIN():
         pin = keyQueue.peek()
         if pin != oldpin:
             print("Enter PIN: " + "*" * keyQueue.getLen())
+            lcd.cursor_pos = (1,0)
+            lcd.write_string("PIN: " + "*" * keyQueue.getLen())
             oldpin = pin
     keyQueue.clear()
     print("Capture PIN timed out")
+    lcd.clear()
+    lcd.home()
+    lcd.write_string("PIN Timeout")
+    sleep(1)
         
-
-
 
 def dispenseBeer():
     print("Dispensing beer")
+    lcd.clear()
+    lcd.home()
+    lcd.write_string("Dispensing beer")
     GPIO.output(BEER_PIN, GPIO.HIGH)
     sleep(1)
     GPIO.output(BEER_PIN, GPIO.LOW)
@@ -166,6 +181,8 @@ try:
         
         if cardID is not None:
             print("Querying balance for", cardID)
+            lcd.write_string(cardID)
+            lcd.crlf()
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
                 data = { "compassID": cardID }
@@ -175,6 +192,8 @@ try:
                 print(reply)
                 if "error" in reply:
                     print(reply["error"])
+                    lcd.write_string(reply["error"])
+                    lcd.crlf()
                 else:
                     confirmCompassBeer(cardID, reply["name"], reply["balance"])
             except json.decoder.JSONDecodeError:
@@ -189,6 +208,8 @@ try:
         keypadID = keyQueue.peek()
         if keypadID != oldKeypadID:
             print("Enter ID:", keypadID)
+            lcd.home()
+            lcd.write_string(cardID)
             oldKeypadID = keypadID
             
         elif POUND_FLAG:
@@ -205,6 +226,9 @@ try:
                     print(reply)
                     if "error" in reply:
                         print(reply["error"])
+                        lcd.crlf()
+                        lcd.write_string(reply["error"])
+                        lcd.crlf()
                     elif reply["dispense"]:
                         dispenseBeer()
 
@@ -230,3 +254,4 @@ finally:
     print("Shutting down")
     rfidReader.ungrab()
     GPIO.cleanup()
+    lcd.close(clear=True)

@@ -2,3 +2,4 @@ evdev
 requests
 pad4pi
 RPi.GPIO
+RPLCD
