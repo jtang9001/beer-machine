@@ -12,6 +12,7 @@ with device.grab_context():
                     cardID += event.keycode
 
         except BlockingIOError:
-            print(cardID)
-            cardID = ""
+            if cardID != '':
+                print(cardID)
+                cardID = ""
             pass
