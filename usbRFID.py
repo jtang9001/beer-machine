@@ -43,7 +43,7 @@ with rfidReader.grab_context():
         if cardID is not None:
             print("Sending request to server for", cardID)
             r = requests.post(
-                "https://spd.jtang.ca/beer/compass", 
+                "https://thetaspd.pythonanywhere.com/beer/compass/", 
                 data={
                     "cost": COST,
                     "compassID": cardID
