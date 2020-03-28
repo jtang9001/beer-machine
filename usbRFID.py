@@ -3,12 +3,56 @@ from time import sleep, time
 
 import evdev
 import requests
-from pad4pi import rpi_gpio
 import RPi.GPIO as GPIO
 
 BEER_PIN = 0
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(BEER_PIN, GPIO.OUT, initial = GPIO.LOW)
+
+L1 = 5
+L2 = 6
+L3 = 13
+L4 = 19
+
+C1 = 16
+C2 = 20
+C3 = 21
+
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+
+GPIO.setup(L1, GPIO.OUT)
+GPIO.setup(L2, GPIO.OUT)
+GPIO.setup(L3, GPIO.OUT)
+GPIO.setup(L4, GPIO.OUT)
+
+GPIO.setup(C1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(C2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(C3, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
+def readLine(line, characters):
+    GPIO.output(line, GPIO.HIGH)
+    if(GPIO.input(C1) == 1):
+        return(characters[0])
+    if(GPIO.input(C2) == 1):
+        return(characters[1])
+    if(GPIO.input(C3) == 1):
+        return(characters[2])
+    GPIO.output(line, GPIO.LOW)
+
+def readKeypad():
+    val1 = readLine(L1, ["1","2","3"])
+    val2 = readLine(L2, ["4","5","6"])
+    val3 = readLine(L3, ["7","8","9"])
+    val4 = readLine(L4, ["*","0","#"])
+    if val1 is not None:
+        return val1
+    elif val2 is not None:
+        return val2
+    elif val3 is not None:
+        return val3
+    elif val4 is not None:
+        return val4
 
 COST = 2.50
 
@@ -41,31 +85,8 @@ class InputsQueue:
 cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
 keyQueue = InputsQueue(maxlen = 8, timeout = 3)
 
-KEYPAD = [
-    ['1', '2', '3'],
-    ['4', '5', '6'],
-    ['7', '8', '9'],
-    ["*", '0', "#"]
-]
-ROW_PINS = [5, 6, 13, 19] # BCM numbering
-COL_PINS = [16, 20, 21] # BCM numbering
-factory = rpi_gpio.KeypadFactory()
-keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PINS)
-
-STAR_FLAG = False
-POUND_FLAG = False
-def handleKey(key):
-    global POUND_FLAG, STAR_FLAG
-    print("Keypad:", key)
-    if key == "#":
-        POUND_FLAG = True
-    if key == "*":
-        STAR_FLAG = True
-    else:
-        keyQueue.add(key)
-
-# printKey will be called each time a keypad button is pressed
-keypad.registerKeyPressHandler(handleKey)
+cardID = None
+keypadID = None
 
 rfidReader = evdev.InputDevice('/dev/input/event0')
 print(rfidReader)
@@ -82,8 +103,8 @@ def confirmCompassBeer(name, bal):
     print("# to dispense, * to cancel")
     startTime = time()
     while time() - startTime <= 5:
-        if POUND_FLAG:
-            POUND_FLAG = False
+        char = readKeypad()
+        if char == "#":
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_compass/", 
                 data = { "compassID": cardID, "cost": COST }
@@ -100,13 +121,11 @@ def confirmCompassBeer(name, bal):
                 raise
             return
 
-        elif STAR_FLAG:
+        elif char == "*":
             print("Beer cancelled with *")
             STAR_FLAG = False
             return
         
-        
-
 rfidReader.grab()
 try:
     while True:
@@ -120,6 +139,12 @@ try:
         except BlockingIOError:
             cardID = cardQueue.churn()
             sleep(0.1)
+
+        key = readKeypad()
+        if key == "#":
+            keypadID = keyQueue.harvest()
+        elif key is not None:
+            keyQueue.add(key)
         
         if cardID is not None:
             print("Querying balance for", cardID)
@@ -138,17 +163,13 @@ try:
                 raise
         
         keyQueue.churn()
-        if keyQueue.peek() != "":
-            print(keyQueue.peek())
-            sleep(0.1)
-        if POUND_FLAG:
-            POUND_FLAG = False
-            userID = keyQueue.harvest()
-            print(userID)
+        if keypadID is not None:
+            print(keypadID)
+            keypadID = None
 
 except KeyboardInterrupt:
     print("Caught Ctrl-C")
 finally:
     print("Shutting down")
     rfidReader.ungrab()
-    keypad.cleanup()
+    GPIO.cleanup()
