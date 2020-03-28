@@ -31,7 +31,6 @@ class InputsQueue:
 cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
 with rfidReader.grab_context():
     while True:
-
         try:
             for event in rfidReader.read():
                 if event.type == evdev.ecodes.EV_KEY:
@@ -50,6 +49,7 @@ with rfidReader.grab_context():
                     "compassID": cardID
                 }
             )
+            cardID = None
             try:
                 reply = r.json()
                 print(reply)
