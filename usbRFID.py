@@ -55,6 +55,8 @@ keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PI
 STAR_FLAG = False
 POUND_FLAG = False
 def handleKey(key):
+    global POUND_FLAG, STAR_FLAG
+    print("Keypad:", key)
     if key == "#":
         POUND_FLAG = True
     if key == "*":
@@ -75,10 +77,11 @@ def dispenseBeer():
     GPIO.output(BEER_PIN, GPIO.LOW)
 
 def confirmCompassBeer(name, bal):
+    global POUND_FLAG, STAR_FLAG
     print(f"{name}, ${bal}")
     print("# to dispense, * to cancel")
-    startTime = time.now()
-    while time.now() - startTime <= 5:
+    startTime = time()
+    while time() - startTime <= 5:
         if POUND_FLAG:
             POUND_FLAG = False
             r = requests.post(
@@ -94,6 +97,7 @@ def confirmCompassBeer(name, bal):
                     print("Could not authorize beer")
             except Exception:
                 print(r.text)
+                raise
             return
 
         elif STAR_FLAG:
@@ -131,6 +135,7 @@ try:
             except Exception:
                 print("Error state!")
                 print(r.text)
+                raise
         
         keyQueue.churn()
         if keyQueue.peek() != "":
