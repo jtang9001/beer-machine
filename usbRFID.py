@@ -6,6 +6,10 @@ import requests
 from pad4pi import rpi_gpio
 import RPi.GPIO as GPIO
 
+BEER_PIN = 0
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(BEER_PIN, GPIO.OUT, initial = GPIO.LOW)
+
 COST = 2.50
 
 class InputsQueue:
@@ -48,11 +52,13 @@ COL_PINS = [16, 20, 21] # BCM numbering
 factory = rpi_gpio.KeypadFactory()
 keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PINS)
 
-DONE_KEY = '#'
-KEYPAD_DONE_FLAG = False
+STAR_FLAG = False
+POUND_FLAG = False
 def handleKey(key):
-    if key == DONE_KEY:
-        KEYPAD_DONE_FLAG = True
+    if key == "#":
+        POUND_FLAG = True
+    if key == "*":
+        STAR_FLAG = True
     else:
         keyQueue.add(key)
 
@@ -61,6 +67,41 @@ keypad.registerKeyPressHandler(printKey)
 
 rfidReader = evdev.InputDevice('/dev/input/event0')
 print(rfidReader)
+
+def dispenseBeer():
+    print("Dispensing beer")
+    GPIO.output(BEER_PIN, GPIO.HIGH)
+    sleep(0.5)
+    GPIO.output(BEER_PIN, GPIO.LOW)
+
+def confirmCompassBeer(name, bal):
+    print(f"{name}, ${bal:.2f}")
+    print("# to dispense, * to cancel")
+    startTime = time.now()
+    while time.now() - startTime <= 5:
+        if POUND_FLAG:
+            POUND_FLAG = False
+            r = requests.post(
+                "https://thetaspd.pythonanywhere.com/beer/pay_compass/", 
+                data = { "compassID": cardID, "cost": COST }
+            )
+            try:
+                reply = r.json()
+                print(reply)
+                if reply["dispense"]:
+                    dispenseBeer()
+                else:
+                    print("Could not authorize beer")
+            except Exception:
+                print(r.text)
+            return
+
+        elif STAR_FLAG:
+            print("Beer cancelled with *")
+            STAR_FLAG = False
+            return
+        
+        
 
 rfidReader.grab()
 try:
@@ -79,23 +120,22 @@ try:
         if cardID is not None:
             print("Sending request to server for", cardID)
             r = requests.post(
-                "https://thetaspd.pythonanywhere.com/beer/compass/", 
-                data={
-                    "cost": COST,
-                    "compassID": cardID
-                }
+                "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
+                data = { "compassID": cardID }
             )
             cardID = None
             try:
                 reply = r.json()
                 print(reply)
+                confirmCompassBeer(reply["name"], reply["balance"])
             except Exception:
                 print(r.text)
         
-        elif KEYPAD_DONE_FLAG:
+        keyQueue.churn()
+        if KEYPAD_DONE_FLAG:
             KEYPAD_DONE_FLAG = False
             userID = keyQueue.harvest()
-
+            print(userID)
 
 except KeyboardInterrupt:
     print("Caught Ctrl-C")
