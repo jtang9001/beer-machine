@@ -167,7 +167,6 @@ try:
                 "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
                 data = { "compassID": cardID }
             )
-            cardID = None
             try:
                 reply = r.json()
                 print(reply)
@@ -176,6 +175,7 @@ try:
                 print("Error state!")
                 print(r.text)
                 raise
+            cardID = None
         
         keyQueue.churn()
         keypadID = keyQueue.peek()
@@ -197,7 +197,7 @@ try:
                         print(reply)
                         if reply["dispense"]:
                             dispenseBeer()
-                            
+
                     except Exception:
                         print("Error state!")
                         print(r.text)
