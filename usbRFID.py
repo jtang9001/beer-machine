@@ -133,7 +133,9 @@ def confirmCompassBeer(cardID, name, bal):
             try:
                 reply = r.json()
                 print(reply)
-                if reply["dispense"]:
+                if "error" in reply:
+                    print(reply["error"])
+                elif reply["dispense"]:
                     dispenseBeer()
                 else:
                     print("Could not authorize beer")
@@ -171,7 +173,10 @@ try:
             try:
                 reply = r.json()
                 print(reply)
-                confirmCompassBeer(cardID, reply["name"], reply["balance"])
+                if "error" in reply:
+                    print(reply["error"])
+                else:
+                    confirmCompassBeer(cardID, reply["name"], reply["balance"])
             except json.decoder.JSONDecodeError:
                 print("JSON error!")
                 print(r.text)
@@ -198,8 +203,11 @@ try:
                 try:
                     reply = r.json()
                     print(reply)
-                    if reply["dispense"]:
+                    if "error" in reply:
+                        print(reply["error"])
+                    elif reply["dispense"]:
                         dispenseBeer()
+
                 except json.decoder.JSONDecodeError:
                     print("JSON error!")
                     print(r.text)
