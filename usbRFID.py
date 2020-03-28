@@ -73,6 +73,9 @@ class InputsQueue:
         contents = "".join(self.queue)
         return contents
 
+    def getLen(self):
+        return len(self.queue)
+
 cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
 keyQueue = InputsQueue(maxlen = 8, timeout = 3)
 
@@ -84,7 +87,29 @@ rfidReader = evdev.InputDevice('/dev/input/event0')
 print(rfidReader)
 
 def capturePIN():
-    print("stub")
+    global keyQueue
+    startTime = time()
+    keyQueue.clear()
+    print("Enter PIN: ")
+    oldpin = ""
+    while time() - startTime <= 10:
+        if POUND_FLAG:
+            POUND_FLAG = False
+            print("Pound detected. PW done")
+            return keyQueue.harvest()
+        elif STAR_FLAG:
+            print("Star detected. Exiting")
+            return
+        keyQueue.churn()
+        pin = keyQueue.peek()
+        if pin != oldpin:
+            print("Enter PIN: " + "*" * keyQueue.getLen())
+            oldpin = pin
+    keyQueue.clear()
+    print("Capture PIN timed out")
+        
+
+
 
 def dispenseBeer():
     print("Dispensing beer")
@@ -92,7 +117,7 @@ def dispenseBeer():
     sleep(0.5)
     GPIO.output(BEER_PIN, GPIO.LOW)
 
-def confirmCompassBeer(name, bal):
+def confirmCompassBeer(cardID, name, bal):
     global POUND_FLAG, STAR_FLAG
     print(f"{name}, ${bal}")
     print("# to dispense, * to cancel")
@@ -120,6 +145,7 @@ def confirmCompassBeer(name, bal):
             print("Beer cancelled with *")
             STAR_FLAG = False
             return
+    print("Compass confirmation timed out.")
         
 rfidReader.grab()
 try:
@@ -145,7 +171,7 @@ try:
             try:
                 reply = r.json()
                 print(reply)
-                confirmCompassBeer(reply["name"], reply["balance"])
+                confirmCompassBeer(cardID, reply["name"], reply["balance"])
             except Exception:
                 print("Error state!")
                 print(r.text)
@@ -158,7 +184,24 @@ try:
             oldKeypadID = keypadID
             if POUND_FLAG:
                 POUND_FLAG = False
-                capturePIN()
+                keypadID = keyQueue.harvest()
+                pin = capturePIN()
+                if pin is not None:
+                    print("Querying balance for", keypadID)
+                    r = requests.post(
+                        "https://thetaspd.pythonanywhere.com/beer/pay_pin/", 
+                        data = { "pin": pin, "keypadID": keypadID, "cost": COST }
+                    )
+                    try:
+                        reply = r.json()
+                        print(reply)
+                        if reply["dispense"]:
+                            dispenseBeer()
+                            
+                    except Exception:
+                        print("Error state!")
+                        print(r.text)
+                        raise
             elif STAR_FLAG:
                 STAR_FLAG = False
                 keyQueue.clear()
