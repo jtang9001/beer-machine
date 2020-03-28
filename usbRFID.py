@@ -6,7 +6,7 @@ import requests
 import RPi.GPIO as GPIO
 from pad4pi import rpi_gpio
 
-BEER_PIN = 0
+BEER_PIN = 5
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(BEER_PIN, GPIO.OUT, initial = GPIO.LOW)
 
@@ -114,7 +114,7 @@ def capturePIN():
 def dispenseBeer():
     print("Dispensing beer")
     GPIO.output(BEER_PIN, GPIO.HIGH)
-    sleep(0.5)
+    sleep(1)
     GPIO.output(BEER_PIN, GPIO.LOW)
 
 def confirmCompassBeer(cardID, name, bal):
@@ -197,12 +197,13 @@ try:
                         print(reply)
                         if reply["dispense"]:
                             dispenseBeer()
-
                     except Exception:
                         print("Error state!")
                         print(r.text)
                         raise
+                    pin = None
             elif STAR_FLAG:
+                print("Star detected. Clearing ID")
                 STAR_FLAG = False
                 keyQueue.clear()
 
