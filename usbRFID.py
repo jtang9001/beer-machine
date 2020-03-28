@@ -42,6 +42,7 @@ with rfidReader.grab_context():
             cardID = cardQueue.churn()
         
         if cardID is not None:
+            print("Sending request to server for", cardID)
             r = requests.post(
                 "https://spd.jtang.ca/beer/compass", 
                 data={
@@ -53,4 +54,4 @@ with rfidReader.grab_context():
                 reply = r.json()
                 print(reply)
             except Exception:
-                print(r)
+                print(r.text)
