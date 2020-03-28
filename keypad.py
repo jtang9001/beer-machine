@@ -1,6 +1,8 @@
 import RPi.GPIO as GPIO
 from time import sleep
 
+GPIO.setmode(GPIO.BCM)
+
 L1 = 5
 L2 = 6
 L3 = 13
