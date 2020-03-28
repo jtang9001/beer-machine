@@ -39,6 +39,7 @@ with rfidReader.grab_context():
                         cardQueue.add(data.keycode[-1]) # last character is one of interest
         except BlockingIOError:
             cardID = cardQueue.churn()
+            sleep(0.1)
         
         if cardID is not None:
             print("Sending request to server for", cardID)
