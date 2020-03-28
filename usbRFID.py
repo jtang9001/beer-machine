@@ -1,6 +1,6 @@
-import evdev
+import evdev as usb
 
-device = evdev.InputDevice('/dev/input/event0')
+device = usb.InputDevice('/dev/input/event0')
 print(device)
 
 cardID = ""
@@ -8,7 +8,9 @@ with device.grab_context():
     while True:
         try:
             for event in device.read():
-                print(evdev.categorize(event))
+                if event.keystate == 1: #keystate 1 is key down
+                    cardID += event.keycode
+
         except BlockingIOError:
             print(cardID)
             cardID = ""
