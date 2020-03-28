@@ -19,7 +19,6 @@ C2 = 20
 C3 = 21
 
 GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BCM)
 
 GPIO.setup(L1, GPIO.OUT)
 GPIO.setup(L2, GPIO.OUT)
