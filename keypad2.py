@@ -19,3 +19,10 @@ def printKey(key):
 
 # printKey will be called each time a keypad button is pressed
 keypad.registerKeyPressHandler(printKey)
+
+try:
+    while True:
+        pass
+except KeyboardInterrupt:
+    print("Caught CTRL-C")
+    keypad.cleanup()
