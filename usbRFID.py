@@ -117,7 +117,21 @@ class LCD:
                 self.lastScrollTick = currentTime
                 self.scrollQueues[linenum].rotate(-1)
 
-    def holdScrollPrint(self, linenum, msg, tickPeriod = 0.5):
+    def tickScrollLines(self, tickPeriod = 0.3):
+        currentTime = time()
+        if currentTime - self.lastScrollTick >  tickPeriod:
+            doScroll = True
+            self.lastScrollTick = currentTime
+
+        for linenum in [0, 1]:
+            if len(self.scrollQueues[linenum]) <= 16:
+                self.writeLine(linenum, "".join(self.scrollQueues[linenum]))
+            else:
+                self.writeLine(linenum, "".join(self.scrollQueues[linenum])[:16])
+                if doScroll:
+                    self.scrollQueues[linenum].rotate(-1)
+
+    def holdScrollPrint(self, linenum, msg, tickPeriod = 0.3):
         origMsg = msg
         self.setScrollLine(linenum, msg)
         self.tickScrollLine(linenum, msg)
@@ -219,8 +233,7 @@ def confirmCompassBeer(cardID, name, bal):
 
     startTime = time()
     while time() - startTime <= 15:
-        disp.tickScrollLine(0)
-        disp.tickScrollLine(1)
+        disp.tickScrollLines()
         if LAST_KEY == "#":
             LAST_KEY = None
             r = requests.post(
