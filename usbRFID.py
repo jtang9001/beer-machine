@@ -78,6 +78,10 @@ class LCD:
         self.lines[1] = msg[16:32]
         #self.debugPrint()
 
+    def holdPrint(self, msg, delay = 3):
+        self.clearPrint(msg)
+        sleep(delay)
+
     def writeLine(self, lineNum, msg):
         msg = str(msg)
         self.lcd.cursor_pos = (lineNum, 0)
@@ -157,8 +161,7 @@ def capturePIN():
             disp.writeLine(1, "Enter PIN>******")
             return pin
     print("Capture PIN timed out")
-    disp.clearPrint("PIN Timeout")
-    sleep(3)
+    disp.holdPrint("PIN Timeout")
         
 def dispenseBeer():
     print("Dispensing beer")
@@ -187,10 +190,12 @@ def confirmCompassBeer(cardID, name, bal):
                 print(reply)
                 if "error" in reply:
                     print(reply["error"])
+                    disp.holdPrint(reply["error"])
                 elif reply["dispense"]:
                     dispenseBeer()
                 else:
                     print("Could not authorize beer")
+                    disp.holdPrint("Could not authorize beer")
             except Exception:
                 print(r.text)
                 raise
@@ -198,6 +203,7 @@ def confirmCompassBeer(cardID, name, bal):
         elif LAST_KEY == "*":
             LAST_KEY = None
             print("Beer cancelled with *")
+            disp.holdPrint("Cancelled")
             return
     print("Compass confirmation timed out.")
         
@@ -232,13 +238,11 @@ def promptPIN(queue: InputsQueue, name, line = 1):
 
 def authorizeCompass(compassID):
     print("Querying balance for", compassID)
-    disp.writeLine(0, "Compass Read OK")
-    disp.writeLine(1, compassID)
+    disp.holdPrint(f"Compass Read OK {compassID}", delay = 1)
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
         data = { "compassID": compassID }
     )
-    sleep(1)
     try:
         reply = r.json()
         print(reply)
