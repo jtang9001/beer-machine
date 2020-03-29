@@ -107,7 +107,7 @@ class LCD:
             self.scrollQueues[linenum] = deque(msg)
             self.lastScrollTick = time()
     
-    def tickScrollLine(self, linenum, tickPeriod = 0.5):
+    def tickScrollLine(self, linenum, tickPeriod = 0.3):
         if len(self.scrollQueues[linenum]) <= 16:
             self.writeLine(linenum, "".join(self.scrollQueues[linenum]))
         else:
