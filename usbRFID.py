@@ -368,6 +368,7 @@ try:
             cardID = None
         
         elif keyID is not None:
+            disp.writeLine(1, f"Enter ID>{keyID}")
             authorizeKeyID(keyID)
             keyID = None
         
