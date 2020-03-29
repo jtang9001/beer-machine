@@ -144,6 +144,9 @@ keyQueue = InputsQueue(maxlen = 3, timeout = 5)
 rfidReader = evdev.InputDevice('/dev/input/event0')
 print(rfidReader)
 
+toggleTime = time()
+toggle = True
+
 def capturePIN():
     pinQueue = InputsQueue(maxlen=6, timeout=5)
     startTime = time()
@@ -293,7 +296,11 @@ try:
             keyID = None
         
         else:
-            disp.writeLine(0, "SPD Beer Machine")
+            currentTime = time()
+            if currentTime - toggleTime > 3:
+                toggleTime = currentTime
+                toggle = not toggle
+            disp.writeLine(0, "SPD Beer Machine" if toggle else "Tap card, or")
             prompt(keyQueue, "ID")
 
 except KeyboardInterrupt:
@@ -301,5 +308,5 @@ except KeyboardInterrupt:
 finally:
     print("Shutting down")
     rfidReader.ungrab()
-    GPIO.cleanup()
     disp.shutdown()
+    GPIO.cleanup()
