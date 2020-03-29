@@ -1,17 +1,24 @@
+#Builtin imports
 from collections import deque
 from time import sleep, time
 import json
 
+#Library imports
 import evdev
 import requests
 import RPi.GPIO as GPIO
 from pad4pi import rpi_gpio
 from RPLCD.gpio import CharLCD
 
+#Price of a beer
+COST = 2.50
+
+#output to pin that dispenses beer
 BEER_PIN = 5
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(BEER_PIN, GPIO.OUT, initial = GPIO.LOW)
 
+#keypad setup
 KEYPAD = [
     ["1", "2", "3", "A"],
     ['4', "5", "6", "B"],
@@ -23,32 +30,78 @@ ROW_PINS = [6, 13, 19, 26] # BCM numbering
 COL_PINS = [12, 16, 20, 21] # BCM numbering
 
 factory = rpi_gpio.KeypadFactory()
-
 keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PINS)
 
-lcd = CharLCD(pin_rs=25, pin_rw=None, pin_e=24, pins_data=[23, 17, 18, 22],
-              numbering_mode=GPIO.BCM, rows = 2, cols = 16)
-
-lcd.clear()
-lcd.write_string("SPD BEER-O-MATIC\n\rEnter ID or tap card")
-
-POUND_FLAG = False
-STAR_FLAG = False
+LAST_KEY = None
 def printKey(key):
-    global POUND_FLAG, STAR_FLAG, keyQueue
+    global LAST_KEY
     print("Keypad event:", key)
-    if key == "#":
-        POUND_FLAG = True
-    elif key == "*":
-        STAR_FLAG = True
-    else:
-        keyQueue.add(key)
-
+    LAST_KEY = key
 
 # printKey will be called each time a keypad button is pressed
 keypad.registerKeyPressHandler(printKey)
 
-COST = 2.50
+#LCD setup
+class LCD:
+    def __init__(self, lcd):
+        self.lcd = lcd
+        self.lcd.clear()
+        self.lines = ["", ""]
+        self.mainLoop()
+
+    # def write(self):
+    #     self.lcd.write_string(self.line1)
+    #     self.lcd.crlf()
+    #     self.lcd.write_string(self.line2)
+
+    def mainLoop(self):
+        self.writeLine(0, "ΣΦΔ Beer Machine")
+        self.writeLine(1, "Enter ID > ")
+
+    def clear(self):
+        self.lcd.clear()
+        self.lcd.home()
+        self.lines = ["", ""]
+
+    def debugPrint(self):
+        print("LCD0: ", self.lines[0])
+        print("LCD1: ", self.lines[1])
+
+    def clearPrint(self, msg):
+        msg = str(msg)
+        self.lcd.clear()
+        self.lcd.home()
+        self.lcd.write_string(msg)
+        self.lines[0] = msg[:16]
+        self.lines[1] = msg[16:32]
+        self.debugPrint()
+
+    def writeLine(self, lineNum, msg):
+        msg = str(msg)
+        self.lcd.cursor_pos = (lineNum + 1, 0)
+        self.lcd.write_string(msg[:16] + " " * (16 - len(msg[:16])))
+        self.lines[lineNum] = msg[:16]
+        self.debugPrint()
+
+    def appendLine(self, lineNum, msg):
+        msg = str(msg)
+        self.lines[lineNum] += msg
+        self.lines[lineNum] = self.lines[lineNum][:16]
+        self.lcd.cursor_pos = (lineNum + 1, 0)
+        self.lcd.write_string(self.lines[lineNum])
+        self.debugPrint()
+            
+    def shutdown(self):
+        self.lcd.close(clear=True)
+
+disp = LCD(
+    CharLCD(
+        pin_rs=25, pin_rw=None, pin_e=24, 
+        pins_data=[23, 17, 18, 22],
+        numbering_mode=GPIO.BCM, 
+        rows = 2, cols = 16
+    )
+)
 
 class InputsQueue:
     def __init__(self, maxlen, timeout):
@@ -84,46 +137,23 @@ class InputsQueue:
         return len(self.queue)
 
 cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
-keyQueue = InputsQueue(maxlen = 8, timeout = 3)
-
-cardID = None
-keypadID = ""
-oldKeypadID = ""
+keyQueue = InputsQueue(maxlen = 3, timeout = 5)
 
 rfidReader = evdev.InputDevice('/dev/input/event0')
 print(rfidReader)
 
 def capturePIN():
-    global POUND_FLAG, STAR_FLAG, keyQueue
+    pinQueue = InputsQueue(maxlen=6, timeout=5)
     startTime = time()
-    keyQueue.clear()
-    print("Enter PIN: ")
-    oldpin = ""
-    lcd.cursor_pos = (1,0)
-    lcd.write_string("PIN:")
     while time() - startTime <= 10:
-        if POUND_FLAG:
-            POUND_FLAG = False
-            print("Pound detected. PW done")
-            return keyQueue.harvest()
-        elif STAR_FLAG:
-            print("Star detected. Exiting")
-            return
-        keyQueue.churn()
-        pin = keyQueue.peek()
-        if pin != oldpin:
-            print("Enter PIN: " + "*" * keyQueue.getLen())
-            lcd.cursor_pos = (1,0)
-            lcd.write_string("PIN: " + "*" * keyQueue.getLen())
-            oldpin = pin
-    keyQueue.clear()
+        prompt(pinQueue, "PIN")
+        pin = handleKeypad(pinQueue)
+        if pin is not None:
+            return pin
     print("Capture PIN timed out")
-    lcd.clear()
-    lcd.home()
-    lcd.write_string("PIN Timeout")
+    disp.clearPrint("PIN Timeout")
     sleep(1)
         
-
 def dispenseBeer():
     print("Dispensing beer")
     lcd.clear()
@@ -134,13 +164,15 @@ def dispenseBeer():
     GPIO.output(BEER_PIN, GPIO.LOW)
 
 def confirmCompassBeer(cardID, name, bal):
-    global POUND_FLAG, STAR_FLAG
-    print(f"{name}, ${bal}")
-    print("# to dispense, * to cancel")
+    global LAST_KEY
+    print(f"${bal} * to stop")
+    print("# to dispense")
+    disp.writeLine(0, f"{name}, ${bal}")
+
     startTime = time()
-    while time() - startTime <= 5:
-        if POUND_FLAG:
-            POUND_FLAG = False
+    while time() - startTime <= 10:
+        if LAST_KEY == "#":
+            LAST_KEY = None
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_compass/", 
                 data = { "compassID": cardID, "cost": COST }
@@ -158,95 +190,100 @@ def confirmCompassBeer(cardID, name, bal):
                 print(r.text)
                 raise
             return
-
-        elif STAR_FLAG:
+        elif LAST_KEY == "*":
+            LAST_KEY = None
             print("Beer cancelled with *")
-            STAR_FLAG = False
             return
     print("Compass confirmation timed out.")
         
+def handleRFID(cardQueue):
+    global rfidReader
+    try:
+        for event in rfidReader.read():
+            if event.type == evdev.ecodes.EV_KEY:
+                data = evdev.categorize(event)
+                if data.keystate == 1:
+                    cardQueue.add(data.keycode[-1]) # last character is one of interest
+    except BlockingIOError:
+        return cardQueue.churn()
+
+def handleKeypad(queue):
+    global LAST_KEY
+    if LAST_KEY is not None:
+        if LAST_KEY == "*":
+            queue.clear()
+        else:
+            queue.add(LAST_KEY)
+        LAST_KEY = None
+    return queue.churn()
+
+def prompt(queue: InputsQueue, name, line = 1):
+    currentInput = f"Enter {name}>{queue.peek()}"
+    disp.writeLine(line, currentInput)
+
+def authorizeCompass(compassID):
+    print("Querying balance for", compassID)
+    disp.writeLine(0, "Compass Read OK")
+    disp.writeLine(1, compassID)
+    r = requests.post(
+        "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
+        data = { "compassID": compassID }
+    )
+    try:
+        reply = r.json()
+        print(reply)
+        if "error" in reply:
+            disp.clearPrint(reply["error"])
+        else:
+            confirmCompassBeer(compassID, reply["name"], reply["balance"])
+    except json.decoder.JSONDecodeError:
+        print("JSON error!")
+        print(r.text)
+    except Exception:
+        print("Error state!")
+        raise
+    cardID = None
+
+def authorizePIN(keypadID, pin):
+    print("Querying balance for", keypadID)
+    r = requests.post(
+        "https://thetaspd.pythonanywhere.com/beer/pay_pin/", 
+        data = { "pin": pin, "keypadID": keypadID, "cost": COST }
+    )
+    try:
+        reply = r.json()
+        print(reply)
+        if "error" in reply:
+            disp.clearPrint(reply["error"])
+        elif reply["dispense"]:
+            dispenseBeer()
+    except json.decoder.JSONDecodeError:
+        print("JSON error!")
+        print(r.text)
+    except Exception:
+        print("Error state!")
+        raise
+
 rfidReader.grab()
 try:
     while True:
         #Scan for card
-        try:
-            for event in rfidReader.read():
-                if event.type == evdev.ecodes.EV_KEY:
-                    data = evdev.categorize(event)
-                    if data.keystate == 1:
-                        cardQueue.add(data.keycode[-1]) # last character is one of interest
-        except BlockingIOError:
-            cardID = cardQueue.churn()
-            sleep(0.1)
+        cardID = handleRFID(cardQueue)
+        keyID = handleKeypad(keyQueue)
         
         if cardID is not None:
-            print("Querying balance for", cardID)
-            lcd.write_string(cardID)
-            lcd.crlf()
-            r = requests.post(
-                "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
-                data = { "compassID": cardID }
-            )
-            try:
-                reply = r.json()
-                print(reply)
-                if "error" in reply:
-                    print(reply["error"])
-                    lcd.write_string(reply["error"])
-                    lcd.crlf()
-                else:
-                    confirmCompassBeer(cardID, reply["name"], reply["balance"])
-            except json.decoder.JSONDecodeError:
-                print("JSON error!")
-                print(r.text)
-            except Exception:
-                print("Error state!")
-                raise
+            authorizeCompass(cardID)
             cardID = None
         
-        keyQueue.churn()
-        keypadID = keyQueue.peek()
-        if keypadID != oldKeypadID:
-            print("Enter ID:", keypadID)
-            lcd.home()
-            lcd.write_string(cardID)
-            oldKeypadID = keypadID
-            
-        elif POUND_FLAG:
-            POUND_FLAG = False
+        elif keyID is not None:
             pin = capturePIN()
             if pin is not None:
-                print("Querying balance for", keypadID)
-                r = requests.post(
-                    "https://thetaspd.pythonanywhere.com/beer/pay_pin/", 
-                    data = { "pin": pin, "keypadID": keypadID, "cost": COST }
-                )
-                try:
-                    reply = r.json()
-                    print(reply)
-                    if "error" in reply:
-                        print(reply["error"])
-                        lcd.crlf()
-                        lcd.write_string(reply["error"])
-                        lcd.crlf()
-                    elif reply["dispense"]:
-                        dispenseBeer()
-
-                except json.decoder.JSONDecodeError:
-                    print("JSON error!")
-                    print(r.text)
-                except Exception:
-                    print("Error state!")
-                    raise
+                authorizePIN(keyID, pin)
             pin = None
-            keypadID = None
-            keyQueue.clear()
+            keyID = None
         
-        elif STAR_FLAG:
-            STAR_FLAG = False
-            keyQueue.clear()
-
-
+        else:
+            prompt(keyQueue, "ID")
 
 except KeyboardInterrupt:
     print("Caught Ctrl-C")
@@ -254,4 +291,4 @@ finally:
     print("Shutting down")
     rfidReader.ungrab()
     GPIO.cleanup()
-    lcd.close(clear=True)
+    disp.close(clear=True)
