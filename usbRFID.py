@@ -275,6 +275,8 @@ def authorizePIN(keypadID, pin):
             sleep(3)
         elif reply["dispense"]:
             dispenseBeer(reply["balance"])
+        elif not reply["dispense"]:
+            disp.holdPrint("Insufficient funds")
     except json.decoder.JSONDecodeError:
         print("JSON error!")
         print(r.text)
