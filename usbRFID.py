@@ -10,8 +10,8 @@ import RPi.GPIO as GPIO
 from pad4pi import rpi_gpio
 from RPLCD.gpio import CharLCD
 
-#Price of a beer
-COST = 2.50
+#Name of machine to send to Django
+MACHINE_NAME = "Basement Left"
 
 #output to pin that dispenses beer
 BEER_PIN = 5
@@ -48,8 +48,11 @@ class LCD:
         self.lcd.clear()
         self.lcd.home()
         self.lines = ["", ""]
+        self.scrollLines = ["", ""]
+        self.scrollQueues = [deque(), deque()]
+        self.lastScrollTick = time()
         self.mainLoop()
-
+        
     # def write(self):
     #     self.lcd.write_string(self.line1)
     #     self.lcd.crlf()
@@ -83,20 +86,45 @@ class LCD:
         sleep(delay)
 
     def writeLine(self, lineNum, msg):
-        msg = str(msg)
+        msg = str(msg)[:16]
         self.lcd.cursor_pos = (lineNum, 0)
-        self.lcd.write_string(msg[:16] + " " * (16 - len(msg[:16])))
-        self.lines[lineNum] = msg[:16]
+        self.lcd.write_string(msg + " " * (16 - len(msg)))
+        self.lines[lineNum] = msg
         #self.debugPrint()
 
-    def appendLine(self, lineNum, msg):
-        msg = str(msg)
-        self.lines[lineNum] += msg
+    def appendLine(self, lineNum, char):
+        char = str(char)
+        self.lines[lineNum] += char
         self.lines[lineNum] = self.lines[lineNum][:16]
         self.lcd.cursor_pos = (lineNum, 0)
         self.lcd.write_string(self.lines[lineNum])
         #self.debugPrint()
-            
+
+    def setScrollLine(self, linenum, msg):
+        msg = msg.strip() + '  '
+        if self.scrollLines[linenum] != msg:
+            self.scrollQueues[linenum] = deque(msg)
+            self.lastScrollTick = time()
+    
+    def tickScrollLine(self, linenum, tickPeriod = 0.5):
+        if len(self.scrollQueues[linenum]) <= 16:
+            self.writeLine(linenum, "".join(self.scrollQueues[linenum]))
+        else:
+            self.writeLine(linenum, "".join(self.scrollQueues[linenum])[:16])
+            currentTime = time()
+            if currentTime - self.lastScrollTick >  tickPeriod:
+                self.lastScrollTick = currentTime
+                self.scrollQueues[linenum].rotate(-1)
+
+    def holdScrollPrint(self, linenum, msg, tickPeriod = 0.5):
+        origMsg = msg
+        self.setScrollLine(linenum, msg)
+        self.tickScrollLine(linenum, msg)
+        currentMsg = "".join(self.scrollQueues[linenum])
+        while currentMsg != origMsg:
+            self.tickScrollLine(linenum, tickPeriod)
+            currentMsg = "".join(self.scrollQueues[linenum])
+         
     def shutdown(self):
         self.lcd.close(clear=True)
 
@@ -142,6 +170,9 @@ class InputsQueue:
     def getLen(self):
         return len(self.queue)
 
+class EmptyInputException(Exception):
+    pass
+
 cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
 keyQueue = InputsQueue(maxlen = 3, timeout = 5)
 
@@ -154,9 +185,16 @@ toggle = True
 def capturePIN():
     pinQueue = InputsQueue(maxlen=6, timeout=5)
     startTime = time()
-    while time() - startTime <= 10:
+    while time() - startTime <= 20:
+        disp.tickScrollLine(0)
         promptPIN(pinQueue, "PIN")
-        pin = handleKeypad(pinQueue)
+        try:
+            pin = handleKeypad(pinQueue)
+        except EmptyInputException:
+            print("Cancelled")
+            disp.holdPrint("Cancelled")
+            return
+
         if pin is not None:
             disp.writeLine(1, "Enter PIN>******")
             return pin
@@ -175,16 +213,18 @@ def confirmCompassBeer(cardID, name, bal):
     global LAST_KEY
     print(f"${bal} * to stop")
     print("# to dispense")
-    disp.writeLine(0, f"${bal} * to stop")
-    disp.writeLine(1, "# to dispense")
+    disp.setScrollLine(0, f"{name} Bal: ${bal}")
+    disp.setScrollLine(1, "# to dispense  * to stop")
 
     startTime = time()
-    while time() - startTime <= 10:
+    while time() - startTime <= 15:
+        disp.tickScrollLine(0)
+        disp.tickScrollLine(1)
         if LAST_KEY == "#":
             LAST_KEY = None
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_compass/", 
-                data = { "compassID": cardID, "cost": COST }
+                data = { "compassID": cardID, "machine": MACHINE_NAME }
             )
             try:
                 reply = r.json()
@@ -195,8 +235,8 @@ def confirmCompassBeer(cardID, name, bal):
                 elif reply["dispense"]:
                     dispenseBeer(reply["balance"])
                 else:
-                    print("Could not authorize beer")
-                    disp.holdPrint("Could not authorize beer")
+                    print("Unknown error")
+                    disp.holdPrint("Unknown error")
             except Exception:
                 print(r.text)
                 raise
@@ -224,7 +264,10 @@ def handleKeypad(queue):
     global LAST_KEY
     if LAST_KEY is not None:
         if LAST_KEY == "*":
-            queue.clear()
+            if queue.getLen() == 0:
+                raise EmptyInputException
+            else:
+                queue.clear()
         else:
             queue.add(LAST_KEY)
         LAST_KEY = None
@@ -249,8 +292,7 @@ def authorizeCompass(compassID):
         reply = r.json()
         print(reply)
         if "error" in reply:
-            disp.clearPrint(reply["error"])
-            sleep(3)
+            disp.holdPrint(reply["error"])
         else:
             confirmCompassBeer(compassID, reply["name"], reply["balance"])
     except json.decoder.JSONDecodeError:
@@ -262,21 +304,47 @@ def authorizeCompass(compassID):
     cardID = None
 
 def authorizePIN(keypadID, pin):
-    print("Querying balance for", keypadID)
+    print("Authorizing payment balance for", keypadID)
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/pay_pin/", 
-        data = { "pin": pin, "keypadID": keypadID, "cost": COST }
+        data = { "pin": pin, "keypadID": keypadID, "machine": MACHINE_NAME }
     )
     try:
         reply = r.json()
         print(reply)
         if "error" in reply:
-            disp.clearPrint(reply["error"])
-            sleep(3)
+            disp.holdPrint(reply["error"])
         elif reply["dispense"]:
             dispenseBeer(reply["balance"])
-        elif not reply["dispense"]:
-            disp.holdPrint("Insufficient funds")
+        else:
+            print("Unknown error")
+            disp.holdPrint("Unknown error")
+    except json.decoder.JSONDecodeError:
+        print("JSON error!")
+        print(r.text)
+    except Exception:
+        print("Error state!")
+        raise
+
+def authorizeKeyID(keypadID):
+    print("Querying balance for", keypadID)
+    r = requests.post(
+        "https://thetaspd.pythonanywhere.com/beer/query_keyID/", 
+        data = { "keypadID": keypadID }
+    )
+    try:
+        reply = r.json()
+        print(reply)
+        if "error" in reply:
+            disp.holdPrint(reply["error"])
+        elif "name" in reply:
+            disp.setScrollLine(0, f"{reply['name']} Bal: ${reply['balance']}")
+            pin = capturePIN()
+            if pin is not None:
+                authorizePIN(keyID, pin)
+        else:
+            print("Unknown error")
+            disp.holdPrint("Unknown error")
     except json.decoder.JSONDecodeError:
         print("JSON error!")
         print(r.text)
@@ -289,27 +357,26 @@ try:
     while True:
         #Scan for card
         cardID = handleRFID(cardQueue)
-        keyID = handleKeypad(keyQueue)
+        try:
+            keyID = handleKeypad(keyQueue)
+        except EmptyInputException:
+            pass
         
         if cardID is not None:
             authorizeCompass(cardID)
             cardID = None
         
         elif keyID is not None:
-            disp.writeLine(0, f"ID {keyID}")
-            pin = capturePIN()
-            if pin is not None:
-                authorizePIN(keyID, pin)
-            pin = None
+            authorizeKeyID(keyID)
             keyID = None
         
         else:
-            currentTime = time()
-            if currentTime - toggleTime > 3:
-                toggleTime = currentTime
-                toggle = not toggle
-            disp.writeLine(0, "SPD Beer Machine" if toggle else "Tap card, or")
-            prompt(keyQueue, "ID")
+            disp.writeLine(0, "SPD Beer Machine")
+            if keyQueue.getLen() == 0:
+                disp.setScrollLine(1, "Tap card or enter ID")
+                disp.tickScrollLine(1)
+            else:
+                prompt(keyQueue, "ID")
 
 except KeyboardInterrupt:
     print("Caught Ctrl-C")
