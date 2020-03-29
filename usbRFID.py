@@ -35,7 +35,7 @@ keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PI
 LAST_KEY = None
 def printKey(key):
     global LAST_KEY
-    print("Keypad event:", key)
+    #print("Keypad event:", key)
     LAST_KEY = key
 
 # printKey will be called each time a keypad button is pressed
@@ -46,6 +46,7 @@ class LCD:
     def __init__(self, lcd):
         self.lcd = lcd
         self.lcd.clear()
+        self.lcd.home()
         self.lines = ["", ""]
         self.mainLoop()
 
@@ -55,7 +56,8 @@ class LCD:
     #     self.lcd.write_string(self.line2)
 
     def mainLoop(self):
-        self.writeLine(0, "ΣΦΔ Beer Machine")
+        self.clear()
+        self.writeLine(0, "SPD Beer Machine")
         self.writeLine(1, "Enter ID > ")
 
     def clear(self):
@@ -74,22 +76,22 @@ class LCD:
         self.lcd.write_string(msg)
         self.lines[0] = msg[:16]
         self.lines[1] = msg[16:32]
-        self.debugPrint()
+        #self.debugPrint()
 
     def writeLine(self, lineNum, msg):
         msg = str(msg)
-        self.lcd.cursor_pos = (lineNum + 1, 0)
+        self.lcd.cursor_pos = (lineNum, 0)
         self.lcd.write_string(msg[:16] + " " * (16 - len(msg[:16])))
         self.lines[lineNum] = msg[:16]
-        self.debugPrint()
+        #self.debugPrint()
 
     def appendLine(self, lineNum, msg):
         msg = str(msg)
         self.lines[lineNum] += msg
         self.lines[lineNum] = self.lines[lineNum][:16]
-        self.lcd.cursor_pos = (lineNum + 1, 0)
+        self.lcd.cursor_pos = (lineNum, 0)
         self.lcd.write_string(self.lines[lineNum])
-        self.debugPrint()
+        #self.debugPrint()
             
     def shutdown(self):
         self.lcd.close(clear=True)
@@ -146,19 +148,18 @@ def capturePIN():
     pinQueue = InputsQueue(maxlen=6, timeout=5)
     startTime = time()
     while time() - startTime <= 10:
-        prompt(pinQueue, "PIN")
+        promptPIN(pinQueue, "PIN")
         pin = handleKeypad(pinQueue)
         if pin is not None:
+            disp.writeLine(1, "Enter PIN>******")
             return pin
     print("Capture PIN timed out")
     disp.clearPrint("PIN Timeout")
-    sleep(1)
+    sleep(3)
         
 def dispenseBeer():
     print("Dispensing beer")
-    lcd.clear()
-    lcd.home()
-    lcd.write_string("Dispensing beer")
+    disp.clearPrint("Dispensing beer")
     GPIO.output(BEER_PIN, GPIO.HIGH)
     sleep(1)
     GPIO.output(BEER_PIN, GPIO.LOW)
@@ -167,7 +168,8 @@ def confirmCompassBeer(cardID, name, bal):
     global LAST_KEY
     print(f"${bal} * to stop")
     print("# to dispense")
-    disp.writeLine(0, f"{name}, ${bal}")
+    disp.writeLine(0, f"${bal} * to stop")
+    disp.writeLine(1, "# to dispense")
 
     startTime = time()
     while time() - startTime <= 10:
@@ -220,6 +222,10 @@ def handleKeypad(queue):
 def prompt(queue: InputsQueue, name, line = 1):
     currentInput = f"Enter {name}>{queue.peek()}"
     disp.writeLine(line, currentInput)
+    
+def promptPIN(queue: InputsQueue, name, line = 1):
+    currentInput = f"Enter {name}>{'*' * queue.getLen()}"
+    disp.writeLine(line, currentInput)
 
 def authorizeCompass(compassID):
     print("Querying balance for", compassID)
@@ -229,11 +235,13 @@ def authorizeCompass(compassID):
         "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
         data = { "compassID": compassID }
     )
+    sleep(1)
     try:
         reply = r.json()
         print(reply)
         if "error" in reply:
             disp.clearPrint(reply["error"])
+            sleep(3)
         else:
             confirmCompassBeer(compassID, reply["name"], reply["balance"])
     except json.decoder.JSONDecodeError:
@@ -255,6 +263,7 @@ def authorizePIN(keypadID, pin):
         print(reply)
         if "error" in reply:
             disp.clearPrint(reply["error"])
+            sleep(3)
         elif reply["dispense"]:
             dispenseBeer()
     except json.decoder.JSONDecodeError:
@@ -276,6 +285,7 @@ try:
             cardID = None
         
         elif keyID is not None:
+            disp.writeLine(0, f"ID {keyID}")
             pin = capturePIN()
             if pin is not None:
                 authorizePIN(keyID, pin)
@@ -283,6 +293,7 @@ try:
             keyID = None
         
         else:
+            disp.writeLine(0, "SPD Beer Machine")
             prompt(keyQueue, "ID")
 
 except KeyboardInterrupt:
@@ -291,4 +302,4 @@ finally:
     print("Shutting down")
     rfidReader.ungrab()
     GPIO.cleanup()
-    disp.close(clear=True)
+    disp.shutdown()
