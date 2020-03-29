@@ -206,6 +206,7 @@ def confirmCompassBeer(cardID, name, bal):
             disp.holdPrint("Cancelled")
             return
     print("Compass confirmation timed out.")
+    disp.holdPrint("Card timeout")
         
 def handleRFID(cardQueue):
     global rfidReader
