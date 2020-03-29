@@ -103,6 +103,7 @@ class LCD:
     def setScrollLine(self, linenum, msg):
         msg = msg.strip() + '  '
         if self.scrollLines[linenum] != msg:
+            self.scrollLines[linenum] = msg
             self.scrollQueues[linenum] = deque(msg)
             self.lastScrollTick = time()
     
