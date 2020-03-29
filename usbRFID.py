@@ -118,18 +118,22 @@ class LCD:
                 self.scrollQueues[linenum].rotate(-1)
 
     def tickScrollLines(self, tickPeriod = 0.3):
+        doScroll = False
         currentTime = time()
         if currentTime - self.lastScrollTick >  tickPeriod:
             doScroll = True
             self.lastScrollTick = currentTime
 
-        for linenum in [0, 1]:
-            if len(self.scrollQueues[linenum]) <= 16:
-                self.writeLine(linenum, "".join(self.scrollQueues[linenum]))
-            else:
-                self.writeLine(linenum, "".join(self.scrollQueues[linenum])[:16])
-                if doScroll:
+        self.writeLine(0, "".join(self.scrollQueues[0]))
+        self.writeLine(1, "".join(self.scrollQueues[1]))
+
+        if doScroll:
+            doScroll = False
+            for linenum in [0,1]:
+                if len(self.scrollQueues[linenum]) > 16:
                     self.scrollQueues[linenum].rotate(-1)
+
+
 
     def holdScrollPrint(self, linenum, msg, tickPeriod = 0.3):
         origMsg = msg
