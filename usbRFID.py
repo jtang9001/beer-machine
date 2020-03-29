@@ -163,9 +163,10 @@ def capturePIN():
     print("Capture PIN timed out")
     disp.holdPrint("PIN Timeout")
         
-def dispenseBeer():
+def dispenseBeer(balance):
     print("Dispensing beer")
-    disp.clearPrint("Dispensing beer")
+    disp.writeLine(0, "Dispensing beer")
+    disp.writeLine(1, f"New bal: ${balance}")
     GPIO.output(BEER_PIN, GPIO.HIGH)
     sleep(1)
     GPIO.output(BEER_PIN, GPIO.LOW)
@@ -192,7 +193,7 @@ def confirmCompassBeer(cardID, name, bal):
                     print(reply["error"])
                     disp.holdPrint(reply["error"])
                 elif reply["dispense"]:
-                    dispenseBeer()
+                    dispenseBeer(reply["balance"])
                 else:
                     print("Could not authorize beer")
                     disp.holdPrint("Could not authorize beer")
@@ -273,7 +274,7 @@ def authorizePIN(keypadID, pin):
             disp.clearPrint(reply["error"])
             sleep(3)
         elif reply["dispense"]:
-            dispenseBeer()
+            dispenseBeer(reply["balance"])
     except json.decoder.JSONDecodeError:
         print("JSON error!")
         print(r.text)
