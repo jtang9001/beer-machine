@@ -255,7 +255,7 @@ def dispenseBeer(balance):
     sleep(1)
     GPIO.output(BEER_PIN, GPIO.LOW)
 
-def confirmCompassBeer(cardID, name, bal):
+def confirmCompass(cardID, name, bal):
     global LAST_KEY
     print(f"${bal} * to stop")
     print("# to dispense")
@@ -327,7 +327,42 @@ def promptPIN(queue: InputsQueue, name, line = 1):
     currentInput = f"Enter {name}>{'*' * queue.getLen()}"
     disp.writeLine(line, currentInput)
 
-def authorizeCompass(compassID):
+def starmode(keyID):
+    disp.setToggleLine(0, ["* Star mode *"])
+    disp.setToggleLine(1, ["* to dispense", "# to exit"])
+    hasBal = True
+    while hasBal:
+        disp.tickToggleLines()
+        if LAST_KEY == "*":
+            LAST_KEY = None
+            r = requests.post(
+                "https://thetaspd.pythonanywhere.com/beer/pay_star/", 
+                data = { "keyID": keyID, "machine": MACHINE_NAME }
+            )
+            try:
+                reply = r.json()
+                print(reply)
+                if "error" in reply:
+                    print(reply["error"])
+                    disp.holdPrint(reply["error"])
+                elif reply["dispense"]:
+                    dispenseBeer(reply["star_mode_balance"])
+                    hasBal = reply["can_dispense_more"]
+                    disp.setToggleLine(0, ["* Star mode *", f"Bal: ${reply['star_mode_balance']}"])
+                else:
+                    print("Unknown error")
+                    disp.holdPrint("Unknown error")
+            except Exception:
+                print(r.text)
+                raise
+            return
+        elif LAST_KEY == "#":
+            LAST_KEY = None
+            print("Star mode cancelled with #")
+            disp.holdPrint("Cancelled")
+            return
+
+def preauthCompass(compassID):
     print("Querying balance for", compassID)
     disp.holdPrint(f"Compass Read OK {compassID}", delay = 1)
     r = requests.post(
@@ -339,8 +374,10 @@ def authorizeCompass(compassID):
         print(reply)
         if "error" in reply:
             disp.holdPrint(reply["error"])
+        elif float(reply["starmode"]) != 0:
+            starmode(reply["keyID"])
         else:
-            confirmCompassBeer(compassID, reply["name"], reply["balance"])
+            confirmCompass(compassID, reply["name"], reply["balance"])
     except json.decoder.JSONDecodeError:
         print("JSON error!")
         print(r.text)
@@ -349,11 +386,11 @@ def authorizeCompass(compassID):
         raise
     cardID = None
 
-def authorizePIN(keypadID, pin):
-    print("Authorizing payment balance for", keypadID)
+def confirmPIN(keyID, pin):
+    print("Authorizing payment balance for", keyID)
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/pay_pin/", 
-        data = { "pin": pin, "keypadID": keypadID, "machine": MACHINE_NAME }
+        data = { "pin": pin, "keyID": keyID, "machine": MACHINE_NAME }
     )
     try:
         reply = r.json()
@@ -372,22 +409,24 @@ def authorizePIN(keypadID, pin):
         print("Error state!")
         raise
 
-def authorizeKeyID(keypadID):
-    print("Querying balance for", keypadID)
+def preauthKeyID(keyID):
+    print("Querying balance for", keyID)
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/query_keyID/", 
-        data = { "keypadID": keypadID }
+        data = { "keyID": keyID }
     )
     try:
         reply = r.json()
         print(reply)
         if "error" in reply:
             disp.holdPrint(reply["error"])
+        elif float(reply["starmode"]) != 0:
+            starmode(reply["keyID"])
         elif "name" in reply:
             disp.setToggleLine(0, [reply["name"], f"Bal: ${reply['balance']}"])
             pin = capturePIN()
             if pin is not None:
-                authorizePIN(keyID, pin)
+                confirmPIN(keyID, pin)
         else:
             print("Unknown error")
             disp.holdPrint("Unknown error")
@@ -409,12 +448,12 @@ try:
             pass
         
         if cardID is not None:
-            authorizeCompass(cardID)
+            preauthCompass(cardID)
             cardID = None
         
         elif keyID is not None:
             disp.writeLine(1, f"Enter ID>{keyID}")
-            authorizeKeyID(keyID)
+            preauthCompass(keyID)
             keyID = None
         
         else:
