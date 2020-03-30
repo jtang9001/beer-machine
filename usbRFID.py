@@ -50,6 +50,7 @@ class LCD:
         self.lines = ["", ""]
         self.scrollLines = ["", ""]
         self.scrollQueues = [deque(), deque()]
+        self.toggleQueues = [deque(), deque()]
         self.lastScrollTick = time()
         self.mainLoop()
         
@@ -133,8 +134,6 @@ class LCD:
                 if len(self.scrollQueues[linenum]) > 16:
                     self.scrollQueues[linenum].rotate(-1)
 
-
-
     def holdScrollPrint(self, linenum, msg, tickPeriod = 0.3):
         origMsg = msg
         self.setScrollLine(linenum, msg)
@@ -143,6 +142,34 @@ class LCD:
         while currentMsg != origMsg:
             self.tickScrollLine(linenum, tickPeriod)
             currentMsg = "".join(self.scrollQueues[linenum])
+
+    def setToggleLine(self, linenum, msgs):
+        msgs = {str(m) for m in msgs}
+        if set(self.toggleQueues[linenum]) != msgs:
+            self.ToggleQueues[linenum] = deque(msgs)
+            self.lastToggleTick = time()
+    
+    def tickToggleLine(self, linenum, tickPeriod = 2):
+        self.writeLine(linenum, self.toggleQueues[linenum])
+        currentTime = time()
+        if currentTime - self.lastToggleTick >  tickPeriod:
+            self.lastToggleTick = currentTime
+            self.toggleQueues[linenum].rotate(-1)
+
+    def tickToggleLines(self, tickPeriod = 2):
+        doToggle = False
+        currentTime = time()
+        if currentTime - self.lastToggleTick >  tickPeriod:
+            doToggle = True
+            self.lastToggleTick = currentTime
+
+        self.writeLine(0, self.toggleQueues[0])
+        self.writeLine(1, self.toggleQueues[1])
+
+        if doToggle:
+            doToggle = False
+            self.toggleQueues[0].rotate(-1)
+            self.toggleQueues[1].rotate(-1)
          
     def shutdown(self):
         self.lcd.close(clear=True)
@@ -205,7 +232,7 @@ def capturePIN():
     pinQueue = InputsQueue(maxlen=6, timeout=5)
     startTime = time()
     while time() - startTime <= 20:
-        disp.tickScrollLine(0)
+        disp.tickToggleLine(0)
         promptPIN(pinQueue, "PIN")
         try:
             pin = handleKeypad(pinQueue)
@@ -232,12 +259,12 @@ def confirmCompassBeer(cardID, name, bal):
     global LAST_KEY
     print(f"${bal} * to stop")
     print("# to dispense")
-    disp.setScrollLine(0, f"{name} Bal: ${bal}")
-    disp.setScrollLine(1, "# to dispense  * to stop")
+    disp.setToggleLine(0, [name, f"Bal: ${bal}"])
+    disp.setToggleLine(1, ["# to dispense", "* to stop"])
 
     startTime = time()
     while time() - startTime <= 15:
-        disp.tickScrollLines()
+        disp.tickToggleLines()
         if LAST_KEY == "#":
             LAST_KEY = None
             r = requests.post(
@@ -356,7 +383,7 @@ def authorizeKeyID(keypadID):
         if "error" in reply:
             disp.holdPrint(reply["error"])
         elif "name" in reply:
-            disp.setScrollLine(0, f"{reply['name']} Bal: ${reply['balance']}")
+            disp.setToggleLine(0, [reply["name"], f"Bal: ${reply['balance']}"])
             pin = capturePIN()
             if pin is not None:
                 authorizePIN(keyID, pin)
@@ -392,8 +419,8 @@ try:
         else:
             disp.writeLine(0, "SPD Beer Machine")
             if keyQueue.getLen() == 0:
-                disp.setScrollLine(1, "Tap card or enter ID")
-                disp.tickScrollLine(1)
+                disp.setToggleLine(1, ["Tap Compass card", "or enter ID>"])
+                disp.tickToggleLine(1)
             else:
                 prompt(keyQueue, "ID")
 
