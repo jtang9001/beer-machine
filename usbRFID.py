@@ -150,7 +150,7 @@ class LCD:
             self.lastToggleTick = time()
     
     def tickToggleLine(self, linenum, tickPeriod = 2):
-        self.writeLine(linenum, self.toggleQueues[linenum])
+        self.writeLine(linenum, self.toggleQueues[linenum][0])
         currentTime = time()
         if currentTime - self.lastToggleTick >  tickPeriod:
             self.lastToggleTick = currentTime
@@ -163,8 +163,8 @@ class LCD:
             doToggle = True
             self.lastToggleTick = currentTime
 
-        self.writeLine(0, self.toggleQueues[0])
-        self.writeLine(1, self.toggleQueues[1])
+        self.writeLine(0, self.toggleQueues[0][0])
+        self.writeLine(1, self.toggleQueues[1][0])
 
         if doToggle:
             doToggle = False
