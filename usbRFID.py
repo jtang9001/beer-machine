@@ -146,7 +146,7 @@ class LCD:
     def setToggleLine(self, linenum, msgs):
         msgs = {str(m) for m in msgs}
         if set(self.toggleQueues[linenum]) != msgs:
-            self.ToggleQueues[linenum] = deque(msgs)
+            self.toggleQueues[linenum] = deque(msgs)
             self.lastToggleTick = time()
     
     def tickToggleLine(self, linenum, tickPeriod = 2):
