@@ -310,6 +310,7 @@ def handleKeypad(queue):
     if LAST_KEY is not None:
         if LAST_KEY == "*":
             if queue.getLen() == 0:
+                LAST_KEY = None
                 raise EmptyInputException
             else:
                 queue.clear()
