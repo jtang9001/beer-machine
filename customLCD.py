@@ -142,11 +142,11 @@ class ModifiedSparkfunLCD(Sparkfun_SerLCD_UART):
         super().__init__(uart)
 
     def write_string(self, msg):
-        super().write(msg)
+        self.write(msg)
 
     def close(self, clear = True):
         if clear:
-            super().clear()
+            self.clear()
         super()._uart.close()
 
 class ModifiedCharLCD(CharLCD):
@@ -162,5 +162,5 @@ class ModifiedCharLCD(CharLCD):
         )
 
     def set_cursor(self, col, row):
-        super().cursor_pos = (row, col)
+        self.cursor_pos = (row, col)
         
