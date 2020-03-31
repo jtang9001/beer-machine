@@ -224,7 +224,6 @@ def starmode(keyID):
             except Exception:
                 print(r.text)
                 raise
-            return
         elif LAST_KEY == "#":
             LAST_KEY = None
             print("Star mode cancelled with #")
