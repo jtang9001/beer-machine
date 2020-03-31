@@ -196,6 +196,7 @@ def promptPIN(queue: InputsQueue, name, line = 1):
     disp.writeLine(line, currentInput)
 
 def starmode(keyID):
+    global LAST_KEY
     disp.setToggleLine(0, ["* Star mode *"])
     disp.setToggleLine(1, ["* to dispense", "# to exit"])
     hasBal = True
