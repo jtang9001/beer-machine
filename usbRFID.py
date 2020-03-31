@@ -337,11 +337,13 @@ try:
             keyID = None
         
         else:
-            disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_NAME])
+            disp.setToggleLine(0, ["SPD Beer-O-Matic", "Tap Compass Card"])
+            disp.setToggleLine(1, [MACHINE_NAME, "or enter ID>"])
             if keyQueue.getLen() == 0:
-                disp.setToggleLine(1, ["Tap Compass card", "or enter ID>"])
                 disp.tickToggleLines()
             else:
+                disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_NAME])
+                disp.tickToggleLine(0)
                 prompt(keyQueue, "ID")
 
 except KeyboardInterrupt:
