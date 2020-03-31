@@ -237,7 +237,7 @@ def preauthCompass(compassID):
     disp.holdPrint(f"Compass Read OK {compassID}", delay = 1)
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
-        data = { "compassID": compassID }
+        data = { "compassID": compassID, "machine": MACHINE_NAME }
     )
     try:
         reply = r.json()
@@ -262,7 +262,7 @@ def preauthKeyID(keyID):
     print("Querying balance for", keyID)
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/query_keyID/", 
-        data = { "keyID": keyID }
+        data = { "keyID": keyID, "machine": MACHINE_NAME }
     )
     try:
         reply = r.json()
