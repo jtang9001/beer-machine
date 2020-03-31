@@ -106,8 +106,8 @@ class LCD:
             currentMsg = "".join(self.scrollQueues[linenum])
 
     def setToggleLine(self, linenum, msgs):
-        msgs = {str(m) for m in msgs}
-        if set(self.toggleQueues[linenum]) != msgs:
+        msgs = [str(m) for m in msgs]
+        if set(self.toggleQueues[linenum]) != set(msgs):
             self.toggleQueues[linenum] = deque(msgs)
             self.lastToggleTick = time()
     

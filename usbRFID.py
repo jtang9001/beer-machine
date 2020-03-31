@@ -195,9 +195,9 @@ def promptPIN(queue: InputsQueue, name, line = 1):
     currentInput = f"Enter {name}>{'*' * queue.getLen()}"
     disp.writeLine(line, currentInput)
 
-def starmode(keyID):
+def starmode(keyID, name):
     global LAST_KEY
-    disp.setToggleLine(0, ["* Star mode *"])
+    disp.setToggleLine(0, ["* Star mode *", f"by {name}"])
     disp.setToggleLine(1, ["* to dispense", "# to exit"])
     hasBal = True
     while hasBal:
@@ -217,7 +217,7 @@ def starmode(keyID):
                 elif reply["dispense"]:
                     dispenseBeer(reply["star_mode_balance"])
                     hasBal = reply["can_dispense_more"]
-                    disp.setToggleLine(0, ["* Star mode *", f"Bal: ${reply['star_mode_balance']}"])
+                    disp.setToggleLine(0, ["* Star mode *", f"by {name}", f"Bal: ${reply['star_mode_balance']}"])
                 else:
                     print("Unknown error")
                     disp.holdPrint("Unknown error")
@@ -227,7 +227,7 @@ def starmode(keyID):
         elif LAST_KEY == "#":
             LAST_KEY = None
             print("Star mode cancelled with #")
-            disp.holdPrint("Cancelled")
+            disp.holdPrint("Starmode over :(")
             return
 
 def preauthCompass(compassID):
@@ -243,7 +243,7 @@ def preauthCompass(compassID):
         if "error" in reply:
             disp.holdPrint(reply["error"])
         elif float(reply["starmode"]) != 0:
-            starmode(reply["keyID"])
+            starmode(reply["keyID"], reply["name"])
         else:
             confirmCompass(compassID, reply["name"], reply["balance"])
     except json.decoder.JSONDecodeError:
@@ -289,7 +289,7 @@ def preauthKeyID(keyID):
         if "error" in reply:
             disp.holdPrint(reply["error"])
         elif float(reply["starmode"]) != 0:
-            starmode(reply["keyID"])
+            starmode(reply["keyID"], reply["name"])
         elif "name" in reply:
             disp.setToggleLine(0, [reply["name"], f"Bal: ${reply['balance']}"])
             pin = capturePIN()
