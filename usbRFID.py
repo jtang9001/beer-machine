@@ -214,6 +214,7 @@ def starmode(keyID, name):
                 if "error" in reply:
                     print(reply["error"])
                     disp.holdPrint(reply["error"])
+                    return
                 elif reply["dispense"]:
                     dispenseBeer(reply["star_mode_balance"])
                     hasBal = reply["can_dispense_more"]
@@ -221,6 +222,7 @@ def starmode(keyID, name):
                 else:
                     print("Unknown error")
                     disp.holdPrint("Unknown error")
+                    return
             except Exception:
                 print(r.text)
                 raise
@@ -242,10 +244,12 @@ def preauthCompass(compassID):
         print(reply)
         if "error" in reply:
             disp.holdPrint(reply["error"])
-        elif float(reply["starmode"]) != 0:
+        elif reply["can_star_mode"]:
             starmode(reply["keyID"], reply["name"])
-        else:
+        elif reply["can_dispense"]:
             confirmCompass(compassID, reply["name"], reply["balance"])
+        else:
+            disp.holdPrint("Low bal for thismachine")
     except json.decoder.JSONDecodeError:
         print("JSON error!")
         print(r.text)
@@ -253,6 +257,34 @@ def preauthCompass(compassID):
         print("Error state!")
         raise
     cardID = None
+
+def preauthKeyID(keyID):
+    print("Querying balance for", keyID)
+    r = requests.post(
+        "https://thetaspd.pythonanywhere.com/beer/query_keyID/", 
+        data = { "keyID": keyID }
+    )
+    try:
+        reply = r.json()
+        print(reply)
+        if "error" in reply:
+            disp.holdPrint(reply["error"])
+        elif reply["can_star_mode"]:
+            starmode(reply["keyID"], reply["name"])
+        elif reply["can_dispense"]:
+            disp.setToggleLine(0, [reply["name"], f"Bal: ${reply['balance']}"])
+            pin = capturePIN()
+            if pin is not None:
+                confirmPIN(keyID, pin)
+        else:
+            print("Insufficient funds")
+            disp.holdPrint("Low bal for thismachine")
+    except json.decoder.JSONDecodeError:
+        print("JSON error!")
+        print(r.text)
+    except Exception:
+        print("Error state!")
+        raise
 
 def confirmPIN(keyID, pin):
     print("Authorizing payment balance for", keyID)
@@ -267,34 +299,6 @@ def confirmPIN(keyID, pin):
             disp.holdPrint(reply["error"])
         elif reply["dispense"]:
             dispenseBeer(reply["balance"])
-        else:
-            print("Unknown error")
-            disp.holdPrint("Unknown error")
-    except json.decoder.JSONDecodeError:
-        print("JSON error!")
-        print(r.text)
-    except Exception:
-        print("Error state!")
-        raise
-
-def preauthKeyID(keyID):
-    print("Querying balance for", keyID)
-    r = requests.post(
-        "https://thetaspd.pythonanywhere.com/beer/query_keyID/", 
-        data = { "keyID": keyID }
-    )
-    try:
-        reply = r.json()
-        print(reply)
-        if "error" in reply:
-            disp.holdPrint(reply["error"])
-        elif float(reply["starmode"]) != 0:
-            starmode(reply["keyID"], reply["name"])
-        elif "name" in reply:
-            disp.setToggleLine(0, [reply["name"], f"Bal: ${reply['balance']}"])
-            pin = capturePIN()
-            if pin is not None:
-                confirmPIN(keyID, pin)
         else:
             print("Unknown error")
             disp.holdPrint("Unknown error")
@@ -325,10 +329,10 @@ try:
             keyID = None
         
         else:
-            disp.writeLine(0, "SPD Beer Machine")
+            disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_NAME])
             if keyQueue.getLen() == 0:
                 disp.setToggleLine(1, ["Tap Compass card", "or enter ID>"])
-                disp.tickToggleLine(1)
+                disp.tickToggleLines()
             else:
                 prompt(keyQueue, "ID")
 
