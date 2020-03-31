@@ -39,9 +39,10 @@ class LCD:
         msg = str(msg)
         self.lcd.clear()
         self.lcd.home()
-        self.lcd.write_string(msg)
         self.lines[0] = msg[:16]
         self.lines[1] = msg[16:32]
+        self.writeLine(0, self.lines[0])
+        self.writeLine(1, self.lines[1])
         #self.debugPrint()
 
     def holdPrint(self, msg, delay = 3):
@@ -147,7 +148,7 @@ class ModifiedSparkfunLCD(Sparkfun_SerLCD_UART):
     def close(self, clear = True):
         if clear:
             self.clear()
-        super()._uart.close()
+        self._uart.close()
 
 class ModifiedCharLCD(CharLCD):
     def __init__(
