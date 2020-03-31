@@ -325,7 +325,7 @@ try:
         
         elif keyID is not None:
             disp.writeLine(1, f"Enter ID>{keyID}")
-            preauthCompass(keyID)
+            preauthKeyID(keyID)
             keyID = None
         
         else:
