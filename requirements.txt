@@ -3,3 +3,5 @@ requests
 pad4pi
 RPi.GPIO
 RPLCD
+sparkfun-circuitpython-serlcd
+adafruit-blinka
