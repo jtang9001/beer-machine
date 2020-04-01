@@ -334,11 +334,15 @@ try:
         if cardID is not None:
             preauthCompass(cardID)
             cardID = None
+            cardQueue.clear()
+            keyQueue.clear()
         
         elif keyID is not None:
             disp.writeLine(1, f"Enter ID>{keyID}")
             preauthKeyID(keyID)
             keyID = None
+            cardQueue.clear()
+            keyQueue.clear()
         
         else:
             disp.setToggleScreens(
