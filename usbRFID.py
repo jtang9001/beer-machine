@@ -108,6 +108,7 @@ def capturePIN():
     pinQueue = InputsQueue(maxlen=6, timeout=5)
     startTime = time()
     while time() - startTime <= 20:
+        sleep(0.03)
         disp.tickToggleLine(0)
         promptPIN(pinQueue, "PIN")
         try:
@@ -140,6 +141,7 @@ def confirmCompass(cardID, name, bal):
 
     startTime = time()
     while time() - startTime <= 15:
+        sleep(0.03)
         disp.tickToggleLines()
         if LAST_KEY == "#":
             LAST_KEY = None
@@ -209,6 +211,7 @@ def starmode(keyID, name):
     disp.setToggleLine(1, ["* to dispense", "# to exit"])
     hasBal = True
     while hasBal:
+        sleep(0.03)
         disp.tickToggleLines()
         if LAST_KEY == "*":
             LAST_KEY = None
@@ -320,6 +323,7 @@ def confirmPIN(keyID, pin):
 rfidReader.grab()
 try:
     while True:
+        sleep(0.03)
         #Scan for card
         cardID = handleRFID(cardQueue)
         try:
