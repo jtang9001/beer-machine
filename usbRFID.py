@@ -15,6 +15,8 @@ from customLCD import *
 #Name of machine to send to Django
 MACHINE_NAME = "Basement Left"
 
+THROTTLE_TICK = 0.01
+
 #output to pin that dispenses beer
 BEER_PIN = 5
 GPIO.setmode(GPIO.BCM)
@@ -108,7 +110,7 @@ def capturePIN():
     pinQueue = InputsQueue(maxlen=6, timeout=5)
     startTime = time()
     while time() - startTime <= 20:
-        sleep(0.03)
+        sleep(THROTTLE_TICK)
         disp.tickToggleLine(0)
         promptPIN(pinQueue, "PIN")
         try:
@@ -141,7 +143,7 @@ def confirmCompass(cardID, name, bal):
 
     startTime = time()
     while time() - startTime <= 15:
-        sleep(0.03)
+        sleep(THROTTLE_TICK)
         disp.tickToggleLines()
         if LAST_KEY == "#":
             LAST_KEY = None
@@ -211,7 +213,7 @@ def starmode(keyID, name):
     disp.setToggleLine(1, ["* to dispense", "# to exit"])
     hasBal = True
     while hasBal:
-        sleep(0.03)
+        sleep(THROTTLE_TICK)
         disp.tickToggleLines()
         if LAST_KEY == "*":
             LAST_KEY = None
@@ -323,7 +325,7 @@ def confirmPIN(keyID, pin):
 rfidReader.grab()
 try:
     while True:
-        sleep(0.03)
+        sleep(THROTTLE_TICK)
         #Scan for card
         cardID = handleRFID(cardQueue)
         try:
@@ -348,8 +350,8 @@ try:
             disp.setToggleScreens(
                 [f"SPD Beer-O-Matic{MACHINE_NAME}", 
                 "Tap Compass Cardor enter ID>",
-                "spd.jtang.ca    /beer for more"
-            ])
+                "spd.jtang.ca    /beer for more"]
+            )
             if keyQueue.getLen() == 0:
                 disp.tickToggleScreens()
             else:
