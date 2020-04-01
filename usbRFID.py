@@ -337,11 +337,15 @@ try:
             keyID = None
         
         else:
-            disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_NAME])
-            disp.setToggleLine(1, ["Tap Compass Card", "or enter ID>"])
+            disp.setToggleScreens(
+                [f"SPD Beer-O-Matic{MACHINE_NAME}", 
+                "Tap Compass Cardor enter ID>",
+                "spd.jtang.ca    /beer for more"
+            ])
             if keyQueue.getLen() == 0:
-                disp.tickToggleLines()
+                disp.tickToggleScreens()
             else:
+                disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_NAME])
                 disp.tickToggleLine(0)
                 prompt(keyQueue, "ID")
 

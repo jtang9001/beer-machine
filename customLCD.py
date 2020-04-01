@@ -13,6 +13,7 @@ class LCD:
         self.scrollLines = ["", ""]
         self.scrollQueues = [deque(), deque()]
         self.toggleQueues = [deque(), deque()]
+        self.toggleScreens = deque()
         self.lastScrollTick = time()
         self.mainLoop()
         
@@ -133,6 +134,19 @@ class LCD:
             doToggle = False
             self.toggleQueues[0].rotate(-1)
             self.toggleQueues[1].rotate(-1)
+
+    def setToggleScreens(self, msgs):
+        msgs = [str(m) for m in msgs]
+        if set(msgs) != set(self.toggleScreens):
+            self.toggleScreens = deque(msgs)
+            self.lastToggleTick = time()
+
+    def tickToggleScreens(self, tickPeriod = 2):
+        self.clearPrint(self.toggleScreens[0])
+        currentTime = time()
+        if currentTime - self.lastToggleTick >  tickPeriod:
+            self.lastToggleTick = currentTime
+            self.toggleScreens.rotate(-1)
          
     def shutdown(self):
         self.lcd.close(clear=True)
