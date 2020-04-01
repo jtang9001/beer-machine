@@ -142,11 +142,11 @@ class LCD:
             self.lastToggleTick = time()
 
     def tickToggleScreens(self, tickPeriod = 2):
-        self.clearPrint(self.toggleScreens[0])
         currentTime = time()
         if currentTime - self.lastToggleTick >  tickPeriod:
             self.lastToggleTick = currentTime
             self.toggleScreens.rotate(-1)
+            self.clearPrint(self.toggleScreens[0])
          
     def shutdown(self):
         self.lcd.close(clear=True)
