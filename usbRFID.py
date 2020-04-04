@@ -247,11 +247,16 @@ def starmode(keyID, name):
 
 def preauthCompass(compassID):
     print("Querying balance for", compassID)
-    disp.holdPrint(f"Compass Read OK {compassID}", delay = 1)
+    startTime = time()
+    disp.writeLine(0, "Pinging server")
+    disp.writeLine(1, f"RFID {compassID}")
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
         data = { "compassID": compassID, "machine": MACHINE_NAME }
     )
+    while time() - startTime < 1:
+        #spin to allow enough time to look at RFID number
+        pass
     try:
         reply = r.json()
         print(reply)
@@ -340,6 +345,7 @@ try:
             keyQueue.clear()
         
         elif keyID is not None:
+            disp.writeLine(0, "Pinging server")
             disp.writeLine(1, f"Enter ID>{keyID}")
             preauthKeyID(keyID)
             keyID = None
