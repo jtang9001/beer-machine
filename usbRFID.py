@@ -175,6 +175,7 @@ def confirmCompass(cardID, name, bal):
 def handleRFID(cardQueue):
     global rfidReader
     if rfidReader is None:
+        initRfid()
         return
     try:
         for event in rfidReader.read():
