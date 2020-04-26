@@ -32,20 +32,20 @@ def printKey(key):
 # printKey will be called each time a keypad button is pressed
 keypad.registerKeyPressHandler(printKey)
 
-# ser = serial.Serial(
-#     port = "/dev/ttyS0",
-#     baudrate = 9600,
-#     timeout = 1.0
-# )
+ser = serial.Serial(
+    port = "/dev/ttyS0",
+    baudrate = 9600,
+    timeout = 1.0
+)
 
 disp = LCD(
-    ModifiedCharLCD(
-        pin_rs=25, pin_rw=None, pin_e=24, 
-        pins_data=[23, 17, 18, 22],
-        numbering_mode=GPIO.BCM, 
-        rows = 2, cols = 16
-    )
-    #ModifiedSparkfunLCD(ser)
+    # ModifiedCharLCD(
+    #     pin_rs=25, pin_rw=None, pin_e=24, 
+    #     pins_data=[23, 17, 18, 22],
+    #     numbering_mode=GPIO.BCM, 
+    #     rows = 2, cols = 16
+    # )
+    ModifiedSparkfunLCD(ser)
 )
 
 class InputsQueue:
