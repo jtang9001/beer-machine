@@ -16,16 +16,15 @@ void handleInterrupt() {
 
 void releaseBeer()
 {
-  timer = millis();
   digitalWrite(RELAY_CTRL_PIN, HIGH);
-  while(millis() < timer+500){}
+  delay(500);
   digitalWrite(RELAY_CTRL_PIN, LOW);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   if (trigger) {
-    trigger = false;
     releaseBeer();
+    trigger = false;
   }
 }
