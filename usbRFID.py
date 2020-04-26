@@ -176,6 +176,9 @@ def handleRFID(cardQueue):
                     cardQueue.add(data.keycode[-1]) # last character is one of interest
     except BlockingIOError:
         return cardQueue.churn()
+    except OSError:
+        print("RFID input error. Skipping")
+        return
 
 def handleKeypad(queue):
     global LAST_KEY
