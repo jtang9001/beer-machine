@@ -100,6 +100,7 @@ def initRfid():
     else:
         rfidReader = None
 
+initRfid()
 toggleTime = time()
 toggle = True
 
@@ -330,8 +331,7 @@ def confirmPIN(keyID, pin):
         print("Error state!")
         raise
 
-if rfidReader is not None:
-    rfidReader.grab()
+
 try:
     while True:
         sleep(THROTTLE_TICK)
