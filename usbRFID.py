@@ -11,9 +11,7 @@ from pad4pi import rpi_gpio
 import serial
 
 from customLCD import *
-
-#Name of machine to send to Django
-MACHINE_NAME = "Basement Left"
+from config import *
 
 THROTTLE_TICK = 0.01
 
@@ -100,8 +98,11 @@ class EmptyInputException(Exception):
 cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
 keyQueue = InputsQueue(maxlen = 3, timeout = 8)
 
-rfidReader = evdev.InputDevice('/dev/input/event0')
-print(rfidReader)
+if RFID_LOCATION != "":
+    rfidReader = evdev.InputDevice(RFID_LOCATION)
+    print(rfidReader)
+else:
+    rfidReader = None
 
 toggleTime = time()
 toggle = True
@@ -149,7 +150,7 @@ def confirmCompass(cardID, name, bal):
             LAST_KEY = None
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_compass/", 
-                data = { "compassID": cardID, "machine": MACHINE_NAME }
+                data = { "compassID": cardID, "machine": MACHINE_KEY }
             )
             try:
                 reply = r.json()
@@ -176,6 +177,8 @@ def confirmCompass(cardID, name, bal):
         
 def handleRFID(cardQueue):
     global rfidReader
+    if rfidReader is None:
+        return
     try:
         for event in rfidReader.read():
             if event.type == evdev.ecodes.EV_KEY:
@@ -219,7 +222,7 @@ def starmode(keyID, name):
             LAST_KEY = None
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_star/", 
-                data = { "keyID": keyID, "machine": MACHINE_NAME }
+                data = { "keyID": keyID, "machine": MACHINE_KEY }
             )
             try:
                 reply = r.json()
@@ -252,7 +255,7 @@ def preauthCompass(compassID):
     disp.writeLine(1, f"RFID {compassID}")
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
-        data = { "compassID": compassID, "machine": MACHINE_NAME }
+        data = { "compassID": compassID, "machine": MACHINE_KEY }
     )
     while time() - startTime < 1:
         #spin to allow enough time to look at RFID number
@@ -280,7 +283,7 @@ def preauthKeyID(keyID):
     print("Querying balance for", keyID)
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/query_keyID/", 
-        data = { "keyID": keyID, "machine": MACHINE_NAME }
+        data = { "keyID": keyID, "machine": MACHINE_KEY }
     )
     try:
         reply = r.json()
@@ -308,7 +311,7 @@ def confirmPIN(keyID, pin):
     print("Authorizing payment balance for", keyID)
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/pay_pin/", 
-        data = { "pin": pin, "keyID": keyID, "machine": MACHINE_NAME }
+        data = { "pin": pin, "keyID": keyID, "machine": MACHINE_KEY }
     )
     try:
         reply = r.json()
@@ -327,7 +330,8 @@ def confirmPIN(keyID, pin):
         print("Error state!")
         raise
 
-rfidReader.grab()
+if rfidReader is not None:
+    rfidReader.grab()
 try:
     while True:
         sleep(THROTTLE_TICK)
@@ -354,14 +358,14 @@ try:
         
         else:
             disp.setToggleScreens(
-                [f"SPD Beer-O-Matic{MACHINE_NAME}", 
+                [f"SPD Beer-O-Matic{MACHINE_KEY}", 
                 "Tap Compass Cardor enter ID>",
                 "spd.jtang.ca    /beer for more"]
             )
             if keyQueue.getLen() == 0:
                 disp.tickToggleScreens()
             else:
-                disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_NAME])
+                disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_KEY])
                 disp.tickToggleLine(0)
                 prompt(keyQueue, "ID")
 
@@ -369,6 +373,7 @@ except KeyboardInterrupt:
     print("Caught Ctrl-C")
 finally:
     print("Shutting down")
-    rfidReader.ungrab()
+    if rfidReader is not None:
+        rfidReader.ungrab()
     disp.shutdown()
     GPIO.cleanup()
