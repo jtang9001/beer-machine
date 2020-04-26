@@ -347,7 +347,7 @@ try:
         
         else:
             disp.setToggleScreens(
-                [f"SPD Beer-O-Matic{MACHINE_KEY}", 
+                [f"SPD Beer-O-Matic{MACHINE_NAME}", 
                 "Tap Compass Cardor enter ID>",
                 "spd.jtang.ca    /beer for more"]
             )
