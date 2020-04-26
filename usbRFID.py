@@ -121,7 +121,7 @@ def dispenseBeer(balance):
     disp.writeLine(0, "Dispensing beer")
     disp.writeLine(1, f"New bal: ${balance}")
     GPIO.output(BEER_PIN, GPIO.HIGH)
-    sleep(1)
+    sleep(0.1)
     GPIO.output(BEER_PIN, GPIO.LOW)
 
 def confirmCompass(cardID, name, bal):
