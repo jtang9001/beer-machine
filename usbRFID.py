@@ -87,11 +87,18 @@ class EmptyInputException(Exception):
 cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
 keyQueue = InputsQueue(maxlen = 3, timeout = 8)
 
-if RFID_LOCATION != "":
-    rfidReader = evdev.InputDevice(RFID_LOCATION)
-    print(rfidReader)
-else:
-    rfidReader = None
+def initRfid():
+    global rfidReader
+    if RFID_LOCATION != "":
+        try:
+            rfidReader = evdev.InputDevice(RFID_LOCATION)
+            print(rfidReader)
+            rfidReader.grab()
+        except OSError:
+            print("OS Error in initRFID")
+            rfidReader = None
+    else:
+        rfidReader = None
 
 toggleTime = time()
 toggle = True
@@ -177,7 +184,8 @@ def handleRFID(cardQueue):
     except BlockingIOError:
         return cardQueue.churn()
     except OSError:
-        print("RFID input error. Skipping")
+        print("RFID input error. Reinitializing")
+        initRfid()
         return
 
 def handleKeypad(queue):
