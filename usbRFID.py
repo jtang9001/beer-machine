@@ -20,17 +20,6 @@ BEER_PIN = 5
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(BEER_PIN, GPIO.OUT, initial = GPIO.LOW)
 
-#keypad setup
-KEYPAD = [
-    ["1", "2", "3", "A"],
-    ['4', "5", "6", "B"],
-    ['7', "8", "9", "C"],
-    ["*", "0", "#", "D"]
-]
-
-ROW_PINS = [6, 13, 19, 26] # BCM numbering
-COL_PINS = [12, 16, 20, 21] # BCM numbering
-
 factory = rpi_gpio.KeypadFactory()
 keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PINS)
 
