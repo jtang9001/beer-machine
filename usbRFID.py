@@ -18,7 +18,7 @@ THROTTLE_TICK = 0.01
 #output to pin that dispenses beer
 BEER_PIN = 5
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(BEER_PIN, GPIO.OUT, initial = GPIO.LOW)
+GPIO.setup(BEER_PIN, GPIO.OUT, initial = GPIO.HIGH)
 
 factory = rpi_gpio.KeypadFactory()
 keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PINS)
@@ -120,9 +120,9 @@ def dispenseBeer(balance):
     print("Dispensing beer")
     disp.writeLine(0, "Dispensing beer")
     disp.writeLine(1, f"New bal: ${balance}")
-    GPIO.output(BEER_PIN, GPIO.HIGH)
-    sleep(0.1)
     GPIO.output(BEER_PIN, GPIO.LOW)
+    sleep(0.1)
+    GPIO.output(BEER_PIN, GPIO.HIGH)
 
 def confirmCompass(cardID, name, bal):
     global LAST_KEY
@@ -354,7 +354,7 @@ try:
             if keyQueue.getLen() == 0:
                 disp.tickToggleScreens()
             else:
-                disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_KEY])
+                disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_NAME])
                 disp.tickToggleLine(0)
                 prompt(keyQueue, "ID")
 

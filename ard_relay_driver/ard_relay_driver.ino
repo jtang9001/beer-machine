@@ -1,30 +1,33 @@
-#define RELAY_CTRL_PIN 8
-#define PI_INTERRUPT_PIN 2
+#define RELAY_PIN 8
+#define PI_PIN 2
 
-volatile bool trigger = false;
+bool latch = true;
 
 void setup() {
   // put your setup code here, to run once:
-  pinMode(RELAY_CTRL_PIN,  OUTPUT);
-  pinMode(PI_INTERRUPT_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(PI_INTERRUPT_PIN), handleInterrupt, RISING);
-}
-
-void handleInterrupt() {
-  trigger = true;
+  pinMode(RELAY_PIN,  OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(PI_PIN, INPUT_PULLUP);
+  digitalWrite(LED_BUILTIN, LOW);
+  digitalWrite(RELAY_PIN, LOW);
 }
 
 void releaseBeer()
 {
-  digitalWrite(RELAY_CTRL_PIN, HIGH);
+  digitalWrite(RELAY_PIN, HIGH);
+  digitalWrite(LED_BUILTIN, HIGH);
   delay(500);
-  digitalWrite(RELAY_CTRL_PIN, LOW);
+  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if (trigger) {
+  if (digitalRead(PI_PIN) == LOW && latch) {
     releaseBeer();
-    trigger = false;
+    latch = false;
+  }
+  else if (digitalRead(PI_PIN) == HIGH) {
+    latch = true;
   }
 }
