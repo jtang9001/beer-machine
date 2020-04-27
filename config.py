@@ -11,6 +11,9 @@ RFID_LOCATION = '/dev/input/event0'
 
 NUMPAD_LOCATION = '/dev/input/event1' 
 
+SPKEY1 = "I"
+SPKEY2 = "Q"
+
 # #keypad setup
 # KEYPAD = [
 #     ["1", "2", "3", "A"],

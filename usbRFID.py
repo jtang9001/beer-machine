@@ -148,16 +148,16 @@ def dispenseBeer(balance):
 
 def confirmCompass(cardID, name, bal):
     global LAST_KEY
-    print(f"${bal} * to stop")
-    print("# to dispense")
+    print(f"${bal} {config.SPKEY1} to stop")
+    print(f"{config.SPKEY2} to dispense")
     disp.setToggleLine(0, [name, f"Bal: ${bal}"])
-    disp.setToggleLine(1, ["# to dispense", "* to stop"])
+    disp.setToggleLine(1, [f"{config.SPKEY2} to dispense", f"{config.SPKEY1} to stop"])
 
     startTime = time()
     while time() - startTime <= 15:
         sleep(THROTTLE_TICK)
         disp.tickToggleLines()
-        if LAST_KEY == "#":
+        if LAST_KEY == config.SPKEY2:
             LAST_KEY = None
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_compass/", 
@@ -178,9 +178,9 @@ def confirmCompass(cardID, name, bal):
                 print(r.text)
                 raise
             return
-        elif LAST_KEY == "*":
+        elif LAST_KEY == config.SPKEY1:
             LAST_KEY = None
-            print("Beer cancelled with *")
+            print("Beer cancelled")
             disp.holdPrint("Cancelled")
             return
     print("Compass confirmation timed out.")
@@ -225,7 +225,7 @@ def handleUSBNumpad(queue):
 def handleKeypad(queue):
     global LAST_KEY
     if LAST_KEY is not None:
-        if LAST_KEY == "*":
+        if LAST_KEY == config.SPKEY1:
             if queue.getLen() == 0:
                 LAST_KEY = None
                 raise EmptyInputException
@@ -246,13 +246,13 @@ def promptPIN(queue: InputsQueue, name, line = 1):
 
 def starmode(keyID, name):
     global LAST_KEY
-    disp.setToggleLine(0, ["* Star mode *", f"by {name}"])
-    disp.setToggleLine(1, ["* to dispense", "# to exit"])
+    disp.setToggleLine(0, ["* Star mode *", f"from {name}"])
+    disp.setToggleLine(1, [f"{config.SPKEY1} to dispense", f"{config.SPKEY2} to exit"])
     hasBal = True
     while hasBal:
         sleep(THROTTLE_TICK)
         disp.tickToggleLines()
-        if LAST_KEY == "*":
+        if LAST_KEY == config.SPKEY1:
             LAST_KEY = None
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_star/", 
@@ -276,9 +276,9 @@ def starmode(keyID, name):
             except Exception:
                 print(r.text)
                 raise
-        elif LAST_KEY == "#":
+        elif LAST_KEY == config.SPKEY2:
             LAST_KEY = None
-            print("Star mode cancelled with #")
+            print("Star mode cancelled")
             disp.holdPrint("Starmode over :(")
             return
 
