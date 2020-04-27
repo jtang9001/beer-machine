@@ -87,11 +87,17 @@ class EmptyInputException(Exception):
 cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
 keyQueue = InputsQueue(maxlen = 3, timeout = 8)
 
+def searchForDevice(devName):
+    devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+    for device in devices:
+        if device.name == devName:
+            return device
+
 def initRfid():
     global rfidReader
-    if config.RFID_LOCATION != "":
+    if config.RFID_DEV_NAME != "":
         try:
-            rfidReader = evdev.InputDevice(config.RFID_LOCATION)
+            rfidReader = searchForDevice(config.RFID_DEV_NAME)
             print(rfidReader)
             rfidReader.grab()
         except OSError:
@@ -102,13 +108,13 @@ def initRfid():
 
 def initNumpad():
     global numpad
-    if config.NUMPAD_LOCATION != "":
+    if config.NUMPAD_DEV_NAME != "":
         try:
-            numpad = evdev.InputDevice(config.NUMPAD_LOCATION)
+            numpad = searchForDevice(config.NUMPAD_DEV_NAME)
             print(numpad)
             numpad.grab()
         except OSError:
-            print("OS Error in initRFID")
+            print("OS Error in initNumpad")
             numpad = None
     else:
         numpad = None
