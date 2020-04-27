@@ -6,8 +6,10 @@ MACHINE_NAME = "Basement Left"
 #Secret key
 MACHINE_KEY = "lo4iwc4t8exnmvytniiluu3n0526qdm00h4xm38sx5hldctx"
 
-#Location of RFID reader
+#Location of USB devices
 RFID_LOCATION = '/dev/input/event0' 
+
+NUMPAD_LOCATION = '/dev/input/event1' 
 
 # #keypad setup
 # KEYPAD = [
