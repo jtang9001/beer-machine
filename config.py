@@ -7,9 +7,9 @@ MACHINE_NAME = "Basement Right"
 MACHINE_KEY = "ro8yckzt7acmpmh8antk9rf5wj0iqd4g2nx8wlpvi41fcbvb"
 
 #Location of USB devices
-RFID_LOCATION = '/dev/input/event0' 
+RFID_DEV_NAME = 'IC Reader IC Reader' 
 
-NUMPAD_LOCATION = '/dev/input/event1' 
+NUMPAD_DEV_NAME = 'winkeyless.kr ps2avrGB' 
 
 SPKEY1 = "I"
 SPKEY2 = "Q"
