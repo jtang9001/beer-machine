@@ -11,8 +11,8 @@ RFID_DEV_NAME = 'IC Reader IC Reader'
 
 NUMPAD_DEV_NAME = 'winkeyless.kr ps2avrGB' 
 
-SPKEY1 = "*"
-SPKEY2 = "#"
+SPKEY1 = "I"
+SPKEY2 = "Q"
 
 # #keypad setup
 # KEYPAD = [

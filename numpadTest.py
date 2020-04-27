@@ -4,9 +4,9 @@ import config
 
 def initNumpad():
     global numpad
-    if config.NUMPAD_LOCATION != "":
+    if config.NUMPAD_DEV_NAME != "":
         try:
-            numpad = evdev.InputDevice(config.NUMPAD_LOCATION)
+            numpad = evdev.InputDevice(config.NUMPAD_DEV_NAME)
             print(numpad)
             numpad.grab()
         except OSError:
