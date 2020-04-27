@@ -164,6 +164,9 @@ def confirmCompass(cardID, name, bal):
     while time() - startTime <= 15:
         sleep(THROTTLE_TICK)
         disp.tickToggleLines()
+        if LAST_KEY = None:
+            LAST_KEY = getLastKeyFromUSB()
+
         if LAST_KEY == config.SPKEY2:
             LAST_KEY = None
             r = requests.post(
@@ -229,6 +232,24 @@ def handleUSBNumpad(queue):
         initNumpad()
         return
 
+def getLastKeyFromUSB():
+    global numpad
+    if numpad is None:
+        initNumpad()
+        return
+    try:
+        for event in numpad.read():
+            if event.type == evdev.ecodes.EV_KEY:
+                data = evdev.categorize(event)
+                if data.keystate == 1:
+                    return data.keycode[-1] # last character is one of interest
+    except BlockingIOError:
+        return
+    except OSError:
+        print("Numpad input error. Reinitializing")
+        initNumpad()
+        return
+
 def handleKeypad(queue):
     global LAST_KEY
     if LAST_KEY is not None:
@@ -259,6 +280,9 @@ def starmode(keyID, name):
     while hasBal:
         sleep(THROTTLE_TICK)
         disp.tickToggleLines()
+        if LAST_KEY = None:
+            LAST_KEY = getLastKeyFromUSB()
+
         if LAST_KEY == config.SPKEY1:
             LAST_KEY = None
             r = requests.post(
