@@ -164,8 +164,10 @@ def confirmCompass(cardID, name, bal):
     while time() - startTime <= 15:
         sleep(THROTTLE_TICK)
         disp.tickToggleLines()
-        if LAST_KEY == None:
+        if LAST_KEY is None:
             LAST_KEY = getLastKeyFromUSB()
+            if LAST_KEY is not None:
+                print(LAST_KEY)
 
         if LAST_KEY == config.SPKEY2:
             LAST_KEY = None
