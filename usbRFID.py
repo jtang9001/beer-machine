@@ -151,6 +151,7 @@ def dispenseBeer(balance):
     GPIO.output(BEER_PIN, GPIO.LOW)
     sleep(0.1)
     GPIO.output(BEER_PIN, GPIO.HIGH)
+    sleep(1.4)
 
 def confirmCompass(cardID, name, bal):
     global LAST_KEY
