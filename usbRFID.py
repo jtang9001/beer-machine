@@ -11,28 +11,17 @@ from pad4pi import rpi_gpio
 import serial
 
 from customLCD import *
-from config import *
+import config
 
 THROTTLE_TICK = 0.01
 
 #output to pin that dispenses beer
 BEER_PIN = 5
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(BEER_PIN, GPIO.OUT, initial = GPIO.LOW)
+GPIO.setup(BEER_PIN, GPIO.OUT, initial = GPIO.HIGH)
 
-#keypad setup
-KEYPAD = [
-    ["1", "2", "3", "A"],
-    ['4', "5", "6", "B"],
-    ['7', "8", "9", "C"],
-    ["*", "0", "#", "D"]
-]
-
-ROW_PINS = [6, 13, 19, 26] # BCM numbering
-COL_PINS = [12, 16, 20, 21] # BCM numbering
-
-factory = rpi_gpio.KeypadFactory()
-keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PINS)
+# factory = rpi_gpio.KeypadFactory()
+# keypad = factory.create_keypad(keypad=config.KEYPAD, row_pins=config.ROW_PINS, col_pins=config.COL_PINS)
 
 LAST_KEY = None
 def printKey(key):
@@ -41,22 +30,22 @@ def printKey(key):
     LAST_KEY = key
 
 # printKey will be called each time a keypad button is pressed
-keypad.registerKeyPressHandler(printKey)
+# keypad.registerKeyPressHandler(printKey)
 
-# ser = serial.Serial(
-#     port = "/dev/ttyS0",
-#     baudrate = 9600,
-#     timeout = 1.0
-# )
+ser = serial.Serial(
+    port = "/dev/ttyS0",
+    baudrate = 9600,
+    timeout = 1.0
+)
 
 disp = LCD(
-    ModifiedCharLCD(
-        pin_rs=25, pin_rw=None, pin_e=24, 
-        pins_data=[23, 17, 18, 22],
-        numbering_mode=GPIO.BCM, 
-        rows = 2, cols = 16
-    )
-    #ModifiedSparkfunLCD(ser)
+    # ModifiedCharLCD(
+    #     pin_rs=25, pin_rw=None, pin_e=24, 
+    #     pins_data=[23, 17, 18, 22],
+    #     numbering_mode=GPIO.BCM, 
+    #     rows = 2, cols = 16
+    # )
+    ModifiedSparkfunLCD(ser)
 )
 
 class InputsQueue:
@@ -98,12 +87,34 @@ class EmptyInputException(Exception):
 cardQueue = InputsQueue(maxlen = 10, timeout = 0.5)
 keyQueue = InputsQueue(maxlen = 3, timeout = 8)
 
-if RFID_LOCATION != "":
-    rfidReader = evdev.InputDevice(RFID_LOCATION)
-    print(rfidReader)
-else:
-    rfidReader = None
+def initRfid():
+    global rfidReader
+    if config.RFID_LOCATION != "":
+        try:
+            rfidReader = evdev.InputDevice(config.RFID_LOCATION)
+            print(rfidReader)
+            rfidReader.grab()
+        except OSError:
+            print("OS Error in initRFID")
+            rfidReader = None
+    else:
+        rfidReader = None
 
+def initNumpad():
+    global numpad
+    if config.NUMPAD_LOCATION != "":
+        try:
+            numpad = evdev.InputDevice(config.NUMPAD_LOCATION)
+            print(numpad)
+            numpad.grab()
+        except OSError:
+            print("OS Error in initRFID")
+            numpad = None
+    else:
+        numpad = None
+
+initRfid()
+initNumpad()
 toggleTime = time()
 toggle = True
 
@@ -115,7 +126,7 @@ def capturePIN():
         disp.tickToggleLine(0)
         promptPIN(pinQueue, "PIN")
         try:
-            pin = handleKeypad(pinQueue)
+            pin = handleUSBNumpad(pinQueue)
         except EmptyInputException:
             print("Cancelled")
             disp.holdPrint("Cancelled")
@@ -131,9 +142,9 @@ def dispenseBeer(balance):
     print("Dispensing beer")
     disp.writeLine(0, "Dispensing beer")
     disp.writeLine(1, f"New bal: ${balance}")
-    GPIO.output(BEER_PIN, GPIO.HIGH)
-    sleep(1)
     GPIO.output(BEER_PIN, GPIO.LOW)
+    sleep(0.1)
+    GPIO.output(BEER_PIN, GPIO.HIGH)
 
 def confirmCompass(cardID, name, bal):
     global LAST_KEY
@@ -150,7 +161,7 @@ def confirmCompass(cardID, name, bal):
             LAST_KEY = None
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_compass/", 
-                data = { "compassID": cardID, "machine": MACHINE_KEY }
+                data = { "compassID": cardID, "machine": config.MACHINE_KEY }
             )
             try:
                 reply = r.json()
@@ -178,6 +189,7 @@ def confirmCompass(cardID, name, bal):
 def handleRFID(cardQueue):
     global rfidReader
     if rfidReader is None:
+        initRfid()
         return
     try:
         for event in rfidReader.read():
@@ -187,6 +199,28 @@ def handleRFID(cardQueue):
                     cardQueue.add(data.keycode[-1]) # last character is one of interest
     except BlockingIOError:
         return cardQueue.churn()
+    except OSError:
+        print("RFID input error. Reinitializing")
+        initRfid()
+        return
+
+def handleUSBNumpad(queue):
+    global numpad
+    if numpad is None:
+        initNumpad()
+        return
+    try:
+        for event in numpad.read():
+            if event.type == evdev.ecodes.EV_KEY:
+                data = evdev.categorize(event)
+                if data.keystate == 1:
+                    queue.add(data.keycode[-1]) # last character is one of interest
+    except BlockingIOError:
+        return queue.churn()
+    except OSError:
+        print("Numpad input error. Reinitializing")
+        initNumpad()
+        return
 
 def handleKeypad(queue):
     global LAST_KEY
@@ -222,7 +256,7 @@ def starmode(keyID, name):
             LAST_KEY = None
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_star/", 
-                data = { "keyID": keyID, "machine": MACHINE_KEY }
+                data = { "keyID": keyID, "machine": config.MACHINE_KEY }
             )
             try:
                 reply = r.json()
@@ -255,7 +289,7 @@ def preauthCompass(compassID):
     disp.writeLine(1, f"RFID {compassID}")
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
-        data = { "compassID": compassID, "machine": MACHINE_KEY }
+        data = { "compassID": compassID, "machine": config.MACHINE_KEY }
     )
     while time() - startTime < 1:
         #spin to allow enough time to look at RFID number
@@ -280,11 +314,15 @@ def preauthCompass(compassID):
     cardID = None
 
 def preauthKeyID(keyID):
+    disp.writeLine(0, "Pinging server")
+    disp.writeLine(1, f"Enter ID>{keyID}")
     print("Querying balance for", keyID)
+
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/query_keyID/", 
-        data = { "keyID": keyID, "machine": MACHINE_KEY }
+        data = { "keyID": keyID, "machine": config.MACHINE_KEY }
     )
+
     try:
         reply = r.json()
         print(reply)
@@ -311,7 +349,7 @@ def confirmPIN(keyID, pin):
     print("Authorizing payment balance for", keyID)
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/pay_pin/", 
-        data = { "pin": pin, "keyID": keyID, "machine": MACHINE_KEY }
+        data = { "pin": pin, "keyID": keyID, "machine": config.MACHINE_KEY }
     )
     try:
         reply = r.json()
@@ -330,15 +368,14 @@ def confirmPIN(keyID, pin):
         print("Error state!")
         raise
 
-if rfidReader is not None:
-    rfidReader.grab()
+
 try:
     while True:
         sleep(THROTTLE_TICK)
         #Scan for card
         cardID = handleRFID(cardQueue)
         try:
-            keyID = handleKeypad(keyQueue)
+            keyID = handleUSBNumpad(keyQueue)
         except EmptyInputException:
             pass
         
@@ -349,8 +386,6 @@ try:
             keyQueue.clear()
         
         elif keyID is not None:
-            disp.writeLine(0, "Pinging server")
-            disp.writeLine(1, f"Enter ID>{keyID}")
             preauthKeyID(keyID)
             keyID = None
             cardQueue.clear()
@@ -358,14 +393,14 @@ try:
         
         else:
             disp.setToggleScreens(
-                [f"SPD Beer-O-Matic{MACHINE_KEY}", 
+                [f"SPD Beer-O-Matic{config.MACHINE_NAME}", 
                 "Tap Compass Cardor enter ID>",
                 "spd.jtang.ca    /beer for more"]
             )
             if keyQueue.getLen() == 0:
                 disp.tickToggleScreens()
             else:
-                disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_KEY])
+                disp.setToggleLine(0, ["SPD Beer-O-Matic", config.MACHINE_NAME])
                 disp.tickToggleLine(0)
                 prompt(keyQueue, "ID")
 
