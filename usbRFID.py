@@ -195,6 +195,8 @@ def confirmCompass(cardID, name, bal):
             print("Beer cancelled")
             disp.holdPrint("Cancelled")
             return
+        else:
+            LAST_KEY = None
     print("Compass confirmation timed out.")
     disp.holdPrint("Card timeout")
         
@@ -311,6 +313,8 @@ def starmode(keyID, name):
             print("Star mode cancelled")
             disp.holdPrint("Starmode over :(")
             return
+        else:
+            LAST_KEY = None
 
 def preauthCompass(compassID):
     print("Querying balance for", compassID)
