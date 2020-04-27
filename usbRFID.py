@@ -164,7 +164,7 @@ def confirmCompass(cardID, name, bal):
     while time() - startTime <= 15:
         sleep(THROTTLE_TICK)
         disp.tickToggleLines()
-        if LAST_KEY = None:
+        if LAST_KEY == None:
             LAST_KEY = getLastKeyFromUSB()
 
         if LAST_KEY == config.SPKEY2:
@@ -280,7 +280,7 @@ def starmode(keyID, name):
     while hasBal:
         sleep(THROTTLE_TICK)
         disp.tickToggleLines()
-        if LAST_KEY = None:
+        if LAST_KEY == None:
             LAST_KEY = getLastKeyFromUSB()
 
         if LAST_KEY == config.SPKEY1:
