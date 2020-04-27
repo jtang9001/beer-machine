@@ -215,22 +215,19 @@ def handleRFID(cardQueue):
         return
 
 def handleUSBNumpad(queue):
-    global numpad
-    if numpad is None:
-        initNumpad()
-        return
-    try:
-        for event in numpad.read():
-            if event.type == evdev.ecodes.EV_KEY:
-                data = evdev.categorize(event)
-                if data.keystate == 1:
-                    queue.add(data.keycode[-1]) # last character is one of interest
-    except BlockingIOError:
-        return queue.churn()
-    except OSError:
-        print("Numpad input error. Reinitializing")
-        initNumpad()
-        return
+    lastkey = getLastKeyFromUSB()
+    
+    if lastkey is not None:
+        if lastkey == config.SPKEY1:
+            if queue.getLen() == 0:
+                lastkey = None
+                raise EmptyInputException
+            else:
+                queue.clear()
+        else:
+            queue.add(lastkey)
+        lastkey = None
+    return queue.churn()
 
 def getLastKeyFromUSB():
     global numpad
