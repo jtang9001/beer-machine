@@ -1,16 +1,24 @@
 import evdev
 import time
 import config
+import traceback
+
+def searchForDevice(devName):
+    devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+    for device in devices:
+        if device.name == devName:
+            return device
 
 def initNumpad():
     global numpad
     if config.NUMPAD_DEV_NAME != "":
         try:
-            numpad = evdev.InputDevice(config.NUMPAD_DEV_NAME)
+            numpad = searchForDevice(config.NUMPAD_DEV_NAME)
             print(numpad)
             numpad.grab()
         except OSError:
-            print("OS Error in initRFID")
+            traceback.print_exc()
+            print("OS Error in initKeypad")
             numpad = None
     else:
         numpad = None
