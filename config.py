@@ -1,18 +1,18 @@
 #These settings are unique to each machine.
 
 #Name of machine to send to Django
-MACHINE_NAME = "Basement Right"
+MACHINE_NAME = "Basement Left"
 
 #Secret key
-MACHINE_KEY = "ro8yckzt7acmpmh8antk9rf5wj0iqd4g2nx8wlpvi41fcbvb"
+MACHINE_KEY = "lo4iwc4t8exnmvytniiluu3n0526qdm00h4xm38sx5hldctx"
 
 #Location of USB devices
 RFID_DEV_NAME = 'IC Reader IC Reader' 
 
 NUMPAD_DEV_NAME = 'winkeyless.kr ps2avrGB' 
 
-SPKEY1 = "I"
-SPKEY2 = "Q"
+SPKEY1 = "*"
+SPKEY2 = "#"
 
 # #keypad setup
 # KEYPAD = [
