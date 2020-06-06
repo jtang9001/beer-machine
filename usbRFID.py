@@ -11,17 +11,13 @@ from pad4pi import rpi_gpio
 import serial
 
 from customLCD import *
-import config
+from config import *
 
-THROTTLE_TICK = 0.01
-
-#output to pin that dispenses beer
-BEER_PIN = 5
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(BEER_PIN, GPIO.OUT, initial = GPIO.HIGH)
 
-# factory = rpi_gpio.KeypadFactory()
-# keypad = factory.create_keypad(keypad=config.KEYPAD, row_pins=config.ROW_PINS, col_pins=config.COL_PINS)
+factory = rpi_gpio.KeypadFactory()
+keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PINS)
 
 LAST_KEY = None
 def printKey(key):
@@ -30,7 +26,7 @@ def printKey(key):
     LAST_KEY = key
 
 # printKey will be called each time a keypad button is pressed
-# keypad.registerKeyPressHandler(printKey)
+keypad.registerKeyPressHandler(printKey)
 
 ser = serial.Serial(
     port = "/dev/ttyS0",
@@ -95,9 +91,9 @@ def searchForDevice(devName):
 
 def initRfid():
     global rfidReader
-    if config.RFID_DEV_NAME != "":
+    if RFID_DEV_NAME != "":
         try:
-            rfidReader = searchForDevice(config.RFID_DEV_NAME)
+            rfidReader = searchForDevice(RFID_DEV_NAME)
             print(rfidReader)
             rfidReader.grab()
         except OSError:
@@ -108,9 +104,9 @@ def initRfid():
 
 def initNumpad():
     global numpad
-    if config.NUMPAD_DEV_NAME != "":
+    if NUMPAD_DEV_NAME != "":
         try:
-            numpad = searchForDevice(config.NUMPAD_DEV_NAME)
+            numpad = searchForDevice(NUMPAD_DEV_NAME)
             print(numpad)
             numpad.grab()
         except OSError:
@@ -155,10 +151,10 @@ def dispenseBeer(balance):
 
 def confirmCompass(cardID, name, bal):
     global LAST_KEY
-    print(f"${bal} {config.SPKEY1} to stop")
-    print(f"{config.SPKEY2} to dispense")
+    print(f"${bal} {SPKEY1} to stop")
+    print(f"{SPKEY2} to dispense")
     disp.setToggleLine(0, [name, f"Bal: ${bal}"])
-    disp.setToggleLine(1, [f"{config.SPKEY2} to dispense", f"{config.SPKEY1} to stop"])
+    disp.setToggleLine(1, [f"{SPKEY2} to dispense", f"{SPKEY1} to stop"])
 
     startTime = time()
     while time() - startTime <= 15:
@@ -169,11 +165,11 @@ def confirmCompass(cardID, name, bal):
             if LAST_KEY is not None:
                 print(LAST_KEY)
 
-        if LAST_KEY == config.SPKEY2:
+        if LAST_KEY == SPKEY2:
             LAST_KEY = None
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_compass/", 
-                data = { "compassID": cardID, "machine": config.MACHINE_KEY }
+                data = { "compassID": cardID, "machine": MACHINE_KEY }
             )
             try:
                 reply = r.json()
@@ -190,7 +186,7 @@ def confirmCompass(cardID, name, bal):
                 print(r.text)
                 raise
             return
-        elif LAST_KEY == config.SPKEY1:
+        elif LAST_KEY == SPKEY1:
             LAST_KEY = None
             print("Beer cancelled")
             disp.holdPrint("Cancelled")
@@ -222,7 +218,7 @@ def handleUSBNumpad(queue):
     lastkey = getLastKeyFromUSB()
     
     if lastkey is not None:
-        if lastkey == config.SPKEY1:
+        if lastkey == SPKEY1:
             if queue.getLen() == 0:
                 lastkey = None
                 raise EmptyInputException
@@ -254,7 +250,7 @@ def getLastKeyFromUSB():
 def handleKeypad(queue):
     global LAST_KEY
     if LAST_KEY is not None:
-        if LAST_KEY == config.SPKEY1:
+        if LAST_KEY == SPKEY1:
             if queue.getLen() == 0:
                 LAST_KEY = None
                 raise EmptyInputException
@@ -276,7 +272,7 @@ def promptPIN(queue: InputsQueue, name, line = 1):
 def starmode(keyID, name):
     global LAST_KEY
     disp.setToggleLine(0, ["* Star mode *", f"from {name}"])
-    disp.setToggleLine(1, [f"{config.SPKEY1} to dispense", f"{config.SPKEY2} to exit"])
+    disp.setToggleLine(1, [f"{SPKEY1} to dispense", f"{SPKEY2} to exit"])
     hasBal = True
     while hasBal:
         sleep(THROTTLE_TICK)
@@ -284,11 +280,11 @@ def starmode(keyID, name):
         if LAST_KEY == None:
             LAST_KEY = getLastKeyFromUSB()
 
-        if LAST_KEY == config.SPKEY1:
+        if LAST_KEY == SPKEY1:
             LAST_KEY = None
             r = requests.post(
                 "https://thetaspd.pythonanywhere.com/beer/pay_star/", 
-                data = { "keyID": keyID, "machine": config.MACHINE_KEY }
+                data = { "keyID": keyID, "machine": MACHINE_KEY }
             )
             try:
                 reply = r.json()
@@ -308,7 +304,7 @@ def starmode(keyID, name):
             except Exception:
                 print(r.text)
                 raise
-        elif LAST_KEY == config.SPKEY2:
+        elif LAST_KEY == SPKEY2:
             LAST_KEY = None
             print("Star mode cancelled")
             disp.holdPrint("Starmode over :(")
@@ -323,7 +319,7 @@ def preauthCompass(compassID):
     disp.writeLine(1, f"RFID {compassID}")
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/query_compass/", 
-        data = { "compassID": compassID, "machine": config.MACHINE_KEY }
+        data = { "compassID": compassID, "machine": MACHINE_KEY }
     )
     while time() - startTime < 1:
         #spin to allow enough time to look at RFID number
@@ -354,7 +350,7 @@ def preauthKeyID(keyID):
 
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/query_keyID/", 
-        data = { "keyID": keyID, "machine": config.MACHINE_KEY }
+        data = { "keyID": keyID, "machine": MACHINE_KEY }
     )
 
     try:
@@ -383,7 +379,7 @@ def confirmPIN(keyID, pin):
     print("Authorizing payment balance for", keyID)
     r = requests.post(
         "https://thetaspd.pythonanywhere.com/beer/pay_pin/", 
-        data = { "pin": pin, "keyID": keyID, "machine": config.MACHINE_KEY }
+        data = { "pin": pin, "keyID": keyID, "machine": MACHINE_KEY }
     )
     try:
         reply = r.json()
@@ -427,14 +423,14 @@ try:
         
         else:
             disp.setToggleScreens(
-                [f"SPD Beer-O-Matic{config.MACHINE_NAME}", 
+                [f"SPD Beer-O-Matic{MACHINE_NAME}", 
                 "Tap Compass Cardor enter ID>",
                 "spd.jtang.ca    /beer for more"]
             )
             if keyQueue.getLen() == 0:
                 disp.tickToggleScreens()
             else:
-                disp.setToggleLine(0, ["SPD Beer-O-Matic", config.MACHINE_NAME])
+                disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_NAME])
                 disp.tickToggleLine(0)
                 prompt(keyQueue, "ID")
 

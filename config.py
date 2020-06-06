@@ -9,10 +9,10 @@ MACHINE_KEY = "lo4iwc4t8exnmvytniiluu3n0526qdm00h4xm38sx5hldctx"
 #Location of USB devices
 RFID_DEV_NAME = 'IC Reader IC Reader' 
 
-NUMPAD_DEV_NAME = 'winkeyless.kr ps2avrGB' 
+#NUMPAD_DEV_NAME = 'winkeyless.kr ps2avrGB' 
 
-SPKEY1 = "I"
-SPKEY2 = "Q"
+SPKEY1 = "*"
+SPKEY2 = "#"
 
 # #keypad setup
 # KEYPAD = [
@@ -35,3 +35,9 @@ KEYPAD = [
 
 ROW_PINS = [6, 13, 19, 26] # BCM numbering
 COL_PINS = [12, 16, 20] # BCM numbering
+
+#delay in event loop to prevent pi from having high CPU utilization
+THROTTLE_TICK = 0.01
+
+#output to pin that dispenses beer
+BEER_PIN = 5

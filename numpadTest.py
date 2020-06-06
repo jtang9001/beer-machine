@@ -1,7 +1,8 @@
 import evdev
 import time
-import config
 import traceback
+
+from config import NUMPAD_DEV_NAME
 
 def searchForDevice(devName):
     devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
@@ -11,9 +12,9 @@ def searchForDevice(devName):
 
 def initNumpad():
     global numpad
-    if config.NUMPAD_DEV_NAME != "":
+    if NUMPAD_DEV_NAME != "":
         try:
-            numpad = searchForDevice(config.NUMPAD_DEV_NAME)
+            numpad = searchForDevice(NUMPAD_DEV_NAME)
             print(numpad)
             numpad.grab()
         except OSError:

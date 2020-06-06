@@ -24,8 +24,14 @@ void releaseBeer()
 void loop() {
   // put your main code here, to run repeatedly:
   if (digitalRead(PI_PIN) == LOW && latch) {
-    releaseBeer();
-    latch = false;
+    delay(100);
+    if digitalRead(PI_PIN == LOW) {
+      delay(100);
+      if digitalRead(PI_PIN == LOW) {
+        releaseBeer();
+        latch = false;
+      }
+    }
   }
   else if (digitalRead(PI_PIN) == HIGH) {
     latch = true;
