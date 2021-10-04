@@ -405,7 +405,7 @@ try:
         #Scan for card
         cardID = handleRFID(cardQueue)
         try:
-            keyID = handleUSBNumpad(keyQueue)
+            keyID = handleKeypad(keyQueue)
         except EmptyInputException:
             pass
         
@@ -424,8 +424,7 @@ try:
         else:
             disp.setToggleScreens(
                 [f"SPD Beer-O-Matic{MACHINE_NAME}", 
-                "Tap Compass Cardor enter ID>",
-                "spd.jtang.ca    /beer for more"]
+                "Tap Compass Cardor enter ID>"]
             )
             if keyQueue.getLen() == 0:
                 disp.tickToggleScreens()
