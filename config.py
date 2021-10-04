@@ -10,6 +10,7 @@ MACHINE_KEY = "lo4iwc4t8exnmvytniiluu3n0526qdm00h4xm38sx5hldctx"
 RFID_DEV_NAME = 'IC Reader IC Reader' 
 
 #NUMPAD_DEV_NAME = 'winkeyless.kr ps2avrGB' 
+NUMPAD_DEV_NAME = '' 
 
 SPKEY1 = "*"
 SPKEY2 = "#"
