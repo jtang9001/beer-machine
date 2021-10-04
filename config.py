@@ -33,7 +33,7 @@ KEYPAD = [
     ["*", "0", "#"]
 ]
 
-ROW_PINS = [6, 13, 19, 26] # BCM numbering
+ROW_PINS = [6, 21, 19, 26] # BCM numbering
 COL_PINS = [12, 16, 20] # BCM numbering
 
 #delay in event loop to prevent pi from having high CPU utilization
