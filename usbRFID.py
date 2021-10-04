@@ -2,6 +2,7 @@
 from collections import deque
 from time import sleep, time
 import json
+import traceback
 
 #Library imports
 import evdev
@@ -35,7 +36,7 @@ lcdser = serial.Serial(
 )
 
 arduinoSer = serial.Serial(
-    port = "/dev/ttyACM0",
+    port = "/dev/ttyACM1",
     baudrate = 9600,
     timeout = 1.0
 )
@@ -150,7 +151,10 @@ def dispenseBeer(balance):
     print("Dispensing beer")
     disp.writeLine(0, "Dispensing beer")
     disp.writeLine(1, f"New bal: ${balance}")
-    arduinoSer.write(b"dx")
+    try:
+        arduinoSer.write(b"dx")
+    except Exception:
+        traceback.print_last()
     # GPIO.output(BEER_PIN, GPIO.LOW)
     # sleep(0.1)
     # GPIO.output(BEER_PIN, GPIO.HIGH)
