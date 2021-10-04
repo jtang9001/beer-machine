@@ -28,8 +28,14 @@ def printKey(key):
 # printKey will be called each time a keypad button is pressed
 keypad.registerKeyPressHandler(printKey)
 
-ser = serial.Serial(
+lcdser = serial.Serial(
     port = "/dev/ttyS0",
+    baudrate = 9600,
+    timeout = 1.0
+)
+
+arduinoSer = serial.Serial(
+    port = "/dev/ttyACM0",
     baudrate = 9600,
     timeout = 1.0
 )
@@ -41,7 +47,7 @@ disp = LCD(
     #     numbering_mode=GPIO.BCM, 
     #     rows = 2, cols = 16
     # )
-    ModifiedSparkfunLCD(ser)
+    ModifiedSparkfunLCD(lcdser)
 )
 
 class InputsQueue:
@@ -144,9 +150,10 @@ def dispenseBeer(balance):
     print("Dispensing beer")
     disp.writeLine(0, "Dispensing beer")
     disp.writeLine(1, f"New bal: ${balance}")
-    GPIO.output(BEER_PIN, GPIO.LOW)
-    sleep(0.1)
-    GPIO.output(BEER_PIN, GPIO.HIGH)
+    arduinoSer.write(b"dx")
+    # GPIO.output(BEER_PIN, GPIO.LOW)
+    # sleep(0.1)
+    # GPIO.output(BEER_PIN, GPIO.HIGH)
     sleep(1.4)
 
 def confirmCompass(cardID, name, bal):
