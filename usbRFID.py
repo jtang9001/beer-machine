@@ -128,7 +128,7 @@ def capturePIN():
         disp.tickToggleLine(0)
         promptPIN(pinQueue, "PIN")
         try:
-            pin = handleUSBNumpad(pinQueue)
+            pin = handleKeypad(pinQueue)
         except EmptyInputException:
             print("Cancelled")
             disp.holdPrint("Cancelled")
