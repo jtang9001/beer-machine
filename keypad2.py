@@ -32,6 +32,7 @@ def printKey(key):
 
 # printKey will be called each time a keypad button is pressed
 keypad.registerKeyPressHandler(printKey)
+print("press any key to print it here")
 
 try:
     while True:
