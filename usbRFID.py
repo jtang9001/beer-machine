@@ -36,7 +36,7 @@ lcdser = serial.Serial(
 )
 
 arduinoSer = serial.Serial(
-    port = "/dev/ttyACM1",
+    port = "/dev/ttyACM0",
     baudrate = 9600,
     timeout = 1.0
 )
