@@ -3,7 +3,7 @@ from collections import deque
 from time import sleep, time
 import json
 import traceback
-import gc
+# import gc
 
 #Library imports
 import evdev
@@ -99,6 +99,7 @@ def searchForDevice(devName):
 
 def initRfid():
     global rfidReader
+    print("In initRfid")
     if RFID_DEV_NAME != "":
         try:
             rfidReader = searchForDevice(RFID_DEV_NAME)
@@ -414,8 +415,8 @@ def confirmPIN(keyID, pin):
 try:
     while True:
         sleep(THROTTLE_TICK)
-        gc.collect()
-        print("_____\nGarbage collector object count", len(gc.get_objects()))
+        # gc.collect()
+        # print("_____\nGarbage collector object count", len(gc.get_objects()))
         #Scan for card
         cardID = handleRFID(cardQueue)
         try:
@@ -423,7 +424,6 @@ try:
         except EmptyInputException:
             pass
         
-        print("Garbage collector object count", len(gc.get_objects()))
         
         if cardID is not None:
             preauthCompass(cardID)
@@ -431,30 +431,24 @@ try:
             cardQueue.clear()
             keyQueue.clear()
             
-            print("Garbage collector object count", len(gc.get_objects()))
         
         elif keyID is not None:
             preauthKeyID(keyID)
             keyID = None
             cardQueue.clear()
             keyQueue.clear()
-            
-            print("Garbage collector object count", len(gc.get_objects()))
         
         else:
             disp.setToggleScreens(
                 [f"SPD Beer-O-Matic{MACHINE_NAME}", 
                 "Tap Compass Cardor enter ID>"]
             )
-            print("Garbage collector object count", len(gc.get_objects()))
             if keyQueue.getLen() == 0:
                 disp.tickToggleScreens()
-                print("Garbage collector object count", len(gc.get_objects()))
             else:
                 disp.setToggleLine(0, ["SPD Beer-O-Matic", MACHINE_NAME])
                 disp.tickToggleLine(0)
                 prompt(keyQueue, "ID")
-                print("Garbage collector object count", len(gc.get_objects()))
 
 except KeyboardInterrupt:
     print("Caught Ctrl-C")

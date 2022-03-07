@@ -1,4 +1,4 @@
-evdev
+evdev>=1.4.0
 requests
 pad4pi
 RPi.GPIO
