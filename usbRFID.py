@@ -3,6 +3,7 @@ from collections import deque
 from time import sleep, time
 import json
 import traceback
+import gc
 
 #Library imports
 import evdev
@@ -413,6 +414,7 @@ def confirmPIN(keyID, pin):
 try:
     while True:
         sleep(THROTTLE_TICK)
+        gc.collect()
         #Scan for card
         cardID = handleRFID(cardQueue)
         try:
