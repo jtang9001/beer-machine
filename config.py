@@ -38,7 +38,7 @@ ROW_PINS = [6, 21, 19, 26] # BCM numbering
 COL_PINS = [12, 16, 20] # BCM numbering
 
 #delay in event loop to prevent pi from having high CPU utilization
-THROTTLE_TICK = 1
+THROTTLE_TICK = 0.0001
 
 #output to pin that dispenses beer
 BEER_PIN = 5
