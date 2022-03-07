@@ -415,7 +415,7 @@ try:
     while True:
         sleep(THROTTLE_TICK)
         gc.collect()
-        print("Garbage collector object count", gc.get_objects())
+        print("Garbage collector object count", len(gc.get_objects()))
         #Scan for card
         cardID = handleRFID(cardQueue)
         try:
